@@ -15,6 +15,9 @@ public class Selectable : MonoBehaviour
     SelectState currentState;
     public SelectState CurrentState { get { return currentState; } }
 
+    bool isSelectable = true;
+    public bool IsSelectable { get { return isSelectable; } set { isSelectable = value; } }
+
     // Start is called before the first frame update
     void Start()
     {
@@ -27,35 +30,37 @@ public class Selectable : MonoBehaviour
 
     public void Select(SelectState selectState)
     {
-    
-        switch (selectState)
+        if (isSelectable)
         {
-            case SelectState.NOCHANGE:
-                return;
+            switch (selectState)
+            {
+                case SelectState.NOCHANGE:
+                    return;
 
-            case SelectState.OFF:
-                currentState = SelectState.OFF;
-                meshRenderer.material = defaultMaterial;
-                break;
+                case SelectState.OFF:
+                    currentState = SelectState.OFF;
+                    meshRenderer.material = defaultMaterial;
+                    break;
 
-            case SelectState.INITIATE:
-                currentState = SelectState.INITIATE;
-                meshRenderer.material = initiateMaterial;
-                break;
+                case SelectState.INITIATE:
+                    currentState = SelectState.INITIATE;
+                    meshRenderer.material = initiateMaterial;
+                    break;
 
-            case SelectState.ATTACK:
-                currentState = SelectState.ATTACK;
-                meshRenderer.material = attackMaterial;
-                break;
+                case SelectState.ATTACK:
+                    currentState = SelectState.ATTACK;
+                    meshRenderer.material = attackMaterial;
+                    break;
 
-            case SelectState.HOVERON:
-                storedMaterial = meshRenderer.material;
-                meshRenderer.material = confirmMaterial;
-                break;
+                case SelectState.HOVERON:
+                    storedMaterial = meshRenderer.material;
+                    meshRenderer.material = confirmMaterial;
+                    break;
 
-            case SelectState.HOVEROFF:
-                meshRenderer.material = storedMaterial;
-                break;
+                case SelectState.HOVEROFF:
+                    meshRenderer.material = storedMaterial;
+                    break;
+            }
         }
     }
    

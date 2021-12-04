@@ -19,6 +19,7 @@ public class Map : MonoBehaviour
     public Dictionary<int, Tile> MapData { get { return mapData; } }
 
     GameObject selectedObject;
+    Unit selectedUnit;
     Vector2 tileSize;
     List<Tile> surroundingTiles = new List<Tile>();
     List<GameObject> unitsToMove = new List<GameObject>();
@@ -106,6 +107,8 @@ public class Map : MonoBehaviour
         RaycastHit hitData = mapCamera.GetRayHitResult();
         GameObject hitObject;
 
+        if(hitData.collider.gameObject)
+
         if (hoverSelect.Count > 0)                                                            //Check for a previous hover selection
         {
           
@@ -135,10 +138,12 @@ public class Map : MonoBehaviour
         {
             hitObject = hitData.collider.gameObject;                               
            
-            Selectable selectable = hitObject.GetComponent<Selectable>();           
-
-            if (selectable)                                                        //If hit object is selectable      
+            Selectable selectable = hitObject.GetComponent<Selectable>();   
+                       
+            if (selectable && selectable.IsSelectable)                                                        //If hit object is selectable      
             {
+                selectable.Select(SelectState.HOVERON);
+                hoverSelect.Add(selectable);     
                 Tile selectedTile = selectable.gameObject.GetComponent<Tile>();
 
                 if (Input.GetKeyDown(KeyCode.A))
@@ -157,7 +162,7 @@ public class Map : MonoBehaviour
                                 Attack attack = selectedUnit.GetComponent<Attack>();
                                 Movement movement = selectedObject.GetComponent<Movement>();
 
-                                selectedUnit.Select();
+                                selectedUnit.NextAction();
                             
                             }
 
@@ -167,17 +172,9 @@ public class Map : MonoBehaviour
 
                                 Movement movement = selectedObject.GetComponent<Movement>();
 
-                                selectedUnit.Select();
+                                selectedUnit.NextAction();
 
-                                /*
-                                if (movement)
-                                {
-                                    for (int i = 0; i < 8; i++)
-                                    {
-                                        TileHighlight(movement.TileStartPosition, surroundingTiles, movement.MovementSelection, SelectState.INITIATE, false);
-                                    }
-                                }
-                                */
+                    
 
                             }
 
@@ -210,6 +207,15 @@ public class Map : MonoBehaviour
 
                 if (Input.GetMouseButtonDown(0))
                 {
+                    if(selectedUnit)
+                    {
+                        selectedUnit.ProcessAction(hitObject);
+                    }
+
+                    else
+                    {
+
+                    }
                     Movement movement;
                         
                     if (selectedTile && surroundingTiles.Contains(selectedTile))   //surroundTiles only populated if
@@ -260,13 +266,11 @@ public class Map : MonoBehaviour
 
                     else                                                              
                     {                                                                  
-                        movement = selectable.gameObject.GetComponent<Movement>();
+
                         Unit unitToSelect = selectable.gameObject.GetComponent<Unit>();
                                                                                        
                         ClearSelection(false);
-
                         
-
                         if (selectedObject)
                         {
                             Selectable selectedObjectSelectable = selectedObject.GetComponent<Selectable>();
@@ -291,8 +295,11 @@ public class Map : MonoBehaviour
                     
                 else
                 {
-                    if(selectedTile)
+                    if(selectedTile && selectedTile.SelectableForAction())
                     {
+                        selectedTile.Select(SelectState.HOVERON);
+          //              hoverSelect.Add
+                        
                         if(surroundingTiles.Contains(selectedTile))
                         {
                             selectable.Select(SelectState.HOVERON);                     //current hover object acceptable as action for 
@@ -318,17 +325,19 @@ public class Map : MonoBehaviour
 
                     else
                     {
-                                                  
+                                                 
                         hoverSelect.Add(selectable);
                         if (hoverSelect[0].gameObject != selectedObject)
                         {
                             selectable.Select(SelectState.INITIATE);                            
                         }
-
+                        
                         
                     }
                 }
-            }          
+                
+            } 
+            
         }
     }
 

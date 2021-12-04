@@ -34,6 +34,15 @@ Vector3 destination;
        
     }
 
+    public void Highlight(bool on)
+    {
+        foreach (Tile tile in tilesInRange)
+        {            
+            if (on) tile.Select(SelectState.ATTACK);
+            else tile.Select(SelectState.OFF);
+        }
+    }
+
     public void RefreshTilesInRange(Map map, Tile currentLocation)
     {
         for(int i = 0; i < attackSelection.Length; i++)

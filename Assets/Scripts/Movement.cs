@@ -129,9 +129,9 @@ public class Movement : MonoBehaviour
     public void Highlight(bool on)
     {
         foreach(Tile tile in tilesInRange)
-        {
-            Selectable tileSelectable = tile.GetComponent<Selectable>();
-            tileSelectable.Select(SelectState.INITIATE);
+        {        
+            if (on) tile.Select(SelectState.INITIATE);
+            else tile.Select(SelectState.OFF);              
         }
     }
 

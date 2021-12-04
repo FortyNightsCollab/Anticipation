@@ -13,9 +13,12 @@ public class Tile : MonoBehaviour
     Material defaultMaterial;
     List<Attack> targetForAttacks = new List<Attack>();
     BoxCollider boxCollider;
+    Selectable selectable;
 
     private void Start()
     {
+        selectable = GetComponent<Selectable>();
+        selectable.IsSelectable = false;
         boxCollider = GetComponent<BoxCollider>();
         meshRenderer = GetComponent<MeshRenderer>();
         defaultMaterial = meshRenderer.material;
@@ -58,7 +61,35 @@ public class Tile : MonoBehaviour
     {
         return targetForAttacks;
     }
+
+    public void Select(SelectState newSelectState)
+    {
+        switch(newSelectState)
+        {
+            case SelectState.INITIATE:               
+                selectable.IsSelectable = true;
+                selectable.Select(newSelectState);
+                break;
+
+            case SelectState.OFF:
+                selectable.Select(newSelectState);
+                selectable.IsSelectable = false;
+                break;
+        }
+
+        
+    }
+
+    public bool SelectableForAction()
+    {
+        if (selectable.CurrentState == SelectState.INITIATE) return true;
+        else return false;
+    }
     
+    public void IsSelectable(bool on)
+    {
+        selectable.enabled = on;
+    }
 }
 
 public class TileLocation

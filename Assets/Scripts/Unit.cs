@@ -11,6 +11,7 @@ public class Unit : MonoBehaviour
     Movement movement;
     Attack attack;
     Map map;
+    bool selectedForMovement;
 
     // Start is called before the first frame update
     void Start()
@@ -30,8 +31,43 @@ public class Unit : MonoBehaviour
     public void Select()
     {
         movement.Highlight(true);
+        selectedForMovement = true;
     }
 
+    public void NextAction()
+    {
+        if(selectedForMovement)
+        {
+            movement.Highlight(false);
+            attack.Highlight(true);
+            selectedForMovement = false;
+        }
+
+        else
+        {            
+            attack.Highlight(false);
+            movement.Highlight(true);
+            selectedForMovement = true;
+        }
+    }
+
+    public bool ProcessAction(GameObject actionObject)
+    {
+        Tile tile = actionObject.GetComponent<Tile>();
+        if(tile)
+        {
+            if(selectedForMovement)
+            {
+                movement.SetDestination(tile.transform.position);
+            }
+
+            else
+            {
+           
+            }
+        }
+        return false;
+    }
 
     private void OnTriggerEnter(Collider collider)
     {
