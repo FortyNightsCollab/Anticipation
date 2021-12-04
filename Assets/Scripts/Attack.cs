@@ -12,6 +12,8 @@ public class Attack : MonoBehaviour
     List<Tile> combatTiles = new List<Tile>();
     public List<Tile> CombatTiles { get { return combatTiles; } }
 
+    public List<Tile> tilesInRange = new List<Tile>();
+
 
 Vector3 destination;
     float destinationDistance;
@@ -22,6 +24,7 @@ Vector3 destination;
     // Start is called before the first frame update
     void Start()
     {
+        
         GenerateDirectionSelections();
         
     }
@@ -29,6 +32,12 @@ Vector3 destination;
     private void Update()
     {
        
+    }
+
+    public void RefreshTilesInRange(Map map, Tile currentLocation)
+    {
+        for(int i = 0; i < attackSelection.Length; i++)
+            map.TileHighlight(currentLocation, tilesInRange, attackSelection[i], SelectState.NOCHANGE);
     }
 
     public void AddCombatTile(Tile tileToAdd)
@@ -41,6 +50,15 @@ Vector3 destination;
         foreach(Tile tile in combatTiles)
         {
             tile.Mark(this);
+        }
+    }
+
+    public void AttackAvailableTargets()
+    {    
+        foreach (Tile tile in combatTiles)
+        {
+            tile.Mark(this);
+            tile.AttackAvailableTargets();
         }
     }
 

@@ -7,17 +7,22 @@ public class Map : MonoBehaviour
 
     [SerializeField] GameObject flatTile;
     [SerializeField] int width;
+    public int Width { get { return width; } }
+
     [SerializeField] int height;
-    
+    public int Height { get { return height; } }
+
     [SerializeField] MapCamera mapCamera;
 
     GameObject First;
-    Dictionary<int, Tile> map = new Dictionary<int, Tile>();
+    Dictionary<int, Tile> mapData = new Dictionary<int, Tile>();
+    public Dictionary<int, Tile> MapData { get { return mapData; } }
+
     GameObject selectedObject;
     Vector2 tileSize;
     List<Tile> surroundingTiles = new List<Tile>();
-    List<Movement> unitsToMove = new List<Movement>();
-    List<Attack> unitsToAttack = new List<Attack>();
+    List<GameObject> unitsToMove = new List<GameObject>();
+    List<GameObject> unitsToAttack = new List<GameObject>();
     CenteredSelection surroundingSelection;
     Highlightable tempHighlight;
     Highlightable confirmAction;
@@ -25,6 +30,7 @@ public class Map : MonoBehaviour
     Vector3 previousMousePosition;
     bool bMovementSelection;
     bool runningTurn = false;
+    
     
 
     // Start is called before the first frame update
@@ -53,7 +59,7 @@ public class Map : MonoBehaviour
                     createdTileLocation = (y << 16);              
                     createdTileLocation |= x;
                                      
-                    map.Add(createdTileLocation, createdTile);
+                    mapData.Add(createdTileLocation, createdTile);
                     createdTile.Location = createdTileLocation;
                 }
 
@@ -72,14 +78,20 @@ public class Map : MonoBehaviour
 
     void ProcessTurn()
     {
-        foreach(Movement movement in unitsToMove)
+        foreach(GameObject objectToMove in unitsToMove)
         {
+            Movement movement = objectToMove.GetComponent<Movement>();
             if(movement.Enroute) { return; }
             movement.SetNewTurnPosition();
-        }
+        }    
 
-        foreach(Attack attack in unitsToAttack)
+        foreach (GameObject attackObject in unitsToAttack)
         {
+            Attack attack = attackObject.GetComponent<Attack>();
+            if(unitsToMove.Contains(attackObject))
+            {
+                attack.AttackAvailableTargets();
+            }
             attack.ClearAttack();
         }
 
@@ -134,52 +146,60 @@ public class Map : MonoBehaviour
                     if (selectedObject != null)
                     {
                         ClearSelection(false);
-                        if (bMovementSelection)
-                        {
-                            
-                            Attack attack = selectedObject.GetComponent<Attack>();
-                            Movement movement = selectedObject.GetComponent<Movement>();
+                        Unit selectedUnit = selectedObject.GetComponent<Unit>();
 
-                            if (attack)
+                        if (selectedUnit)
+                        {
+
+                            if (bMovementSelection)
                             {
-                                for (int i = 0; i < 8; i++)
-                                {
-                                    TileHighlight(movement.GetCurrentTileLocation(), surroundingTiles, attack.GetMapSelection(i), SelectState.INITIATE, false);
-                                }
+
+                                Attack attack = selectedUnit.GetComponent<Attack>();
+                                Movement movement = selectedObject.GetComponent<Movement>();
+
+                                selectedUnit.Select();
+                            
                             }
 
-                            
-                        }
-                    
 
-                        else
-                        {
-                                                                                   
-                            Movement movement = selectedObject.GetComponent<Movement>();
-
-                            if (movement)
+                            else
                             {
-                                for (int i = 0; i < 8; i++)
-                                {
-                                    TileHighlight(movement.TileStartPosition, surroundingTiles, movement.MovementSelection, SelectState.INITIATE, false);
-                                }
-                            }
-                            
-                        }
 
-                        bMovementSelection = !bMovementSelection;
+                                Movement movement = selectedObject.GetComponent<Movement>();
+
+                                selectedUnit.Select();
+
+                                /*
+                                if (movement)
+                                {
+                                    for (int i = 0; i < 8; i++)
+                                    {
+                                        TileHighlight(movement.TileStartPosition, surroundingTiles, movement.MovementSelection, SelectState.INITIATE, false);
+                                    }
+                                }
+                                */
+
+                            }
+
+                            bMovementSelection = !bMovementSelection;
+                        }
                     }
                 }
 
                 if (Input.GetKeyDown(KeyCode.T))
                 {
-                    foreach(Attack attack in unitsToAttack)
+                    foreach(GameObject attackObject in unitsToAttack)
                     {
-                        attack.ArmTilesForAttack();
+                        if (!unitsToMove.Contains(attackObject))
+                        {
+                            Attack attack = attackObject.GetComponent<Attack>();
+                            attack.ArmTilesForAttack();
+                        }
                     }
 
-                    foreach(Movement movement in unitsToMove)
+                    foreach(GameObject moveObject in unitsToMove)
                     {
+                        Movement movement = moveObject.GetComponent<Movement>();
                         Debug.Log("Move units");
                         movement.ReturnToStart();
                         movement.Move();
@@ -206,7 +226,7 @@ public class Map : MonoBehaviour
                             selectedObjectSelectable.Select(SelectState.OFF);
                             selectedObject = null;                                     //previous selected object performed action... deselect
                             unitAttack.ClearAttack();
-                            unitsToMove.Add(movement);
+                            unitsToMove.Add(movement.gameObject);
                             movement.TileDestination = selectedTile;
                         }
 
@@ -231,7 +251,7 @@ public class Map : MonoBehaviour
                                     unitAttack.AddCombatTile(tile);
                                 }
 
-                                if (!unitsToAttack.Contains(unitAttack)) unitsToAttack.Add(unitAttack);
+                                if (!unitsToAttack.Contains(unitAttack.gameObject)) unitsToAttack.Add(unitAttack.gameObject);
                             }
                         }
 
@@ -240,7 +260,8 @@ public class Map : MonoBehaviour
 
                     else                                                              
                     {                                                                  
-                        movement = selectable.gameObject.GetComponent<Movement>();     
+                        movement = selectable.gameObject.GetComponent<Movement>();
+                        Unit unitToSelect = selectable.gameObject.GetComponent<Unit>();
                                                                                        
                         ClearSelection(false);
 
@@ -252,14 +273,16 @@ public class Map : MonoBehaviour
                             selectedObjectSelectable.Select(SelectState.OFF);
                         }
 
-                        if (movement)
+                        if(unitToSelect)
                         {
+                            unitToSelect.Select();
                             selectedObject = hitObject;                                             //new object selected
                             bMovementSelection = true;
                             mapCamera.ChangeFocalPoint(selectedObject.transform.position);
                             selectable.Select(SelectState.HOVERON);
-                            TileHighlight(movement.TileStartPosition, surroundingTiles, movement.MovementSelection, SelectState.INITIATE, false);
                         }
+
+                   
 
                         else selectedObject = null;                                     //an unselectable object was clicked clear current selection
                     }                                
@@ -309,11 +332,236 @@ public class Map : MonoBehaviour
         }
     }
 
+    /*
+    void SetupTurn()
+    {
+        RaycastHit hitData = mapCamera.GetRayHitResult();
+        GameObject hitObject;
+
+        if (hoverSelect.Count > 0)                                                            //Check for a previous hover selection
+        {
+
+            Tile hoverTile = hoverSelect[0].gameObject.GetComponent<Tile>();
+
+            if (hoverTile)                                                          //If previous hover selection part of 
+            {                                                                       //potential action selections
+                foreach (Selectable selectable in hoverSelect)
+                {
+                    if (selectable.CurrentState != SelectState.ATTACK) selectable.Select(SelectState.INITIATE);
+
+                    else selectable.Select(SelectState.HOVEROFF);
+                }
+            }
+
+            else                                                                   //Otherwise turn selection completely off
+            {
+                foreach (Selectable selectable in hoverSelect)
+                {
+                    selectable.Select(SelectState.HOVEROFF);
+                }
+            }
+            hoverSelect.Clear();                                                   //hover selection deselected every frame 
+        }
+
+        if (hitData.collider)                                                      //If raycast hit something
+        {
+            hitObject = hitData.collider.gameObject;
+
+            Selectable selectable = hitObject.GetComponent<Selectable>();
+
+            if (selectable)                                                        //If hit object is selectable      
+            {
+                Tile selectedTile = selectable.gameObject.GetComponent<Tile>();
+
+                if (Input.GetKeyDown(KeyCode.A))
+                {
+                    if (selectedObject != null)
+                    {
+                        ClearSelection(false);
+                        if (bMovementSelection)
+                        {
+
+                            Attack attack = selectedObject.GetComponent<Attack>();
+                            Movement movement = selectedObject.GetComponent<Movement>();
+
+                            if (attack)
+                            {
+                                for (int i = 0; i < 8; i++)
+                                {
+                                    TileHighlight(movement.GetCurrentTileLocation(), surroundingTiles, attack.GetMapSelection(i), SelectState.INITIATE, false);
+                                }
+                            }
+
+
+                        }
+
+
+                        else
+                        {
+
+                            Movement movement = selectedObject.GetComponent<Movement>();
+
+                            if (movement)
+                            {
+                                for (int i = 0; i < 8; i++)
+                                {
+                                    TileHighlight(movement.TileStartPosition, surroundingTiles, movement.MovementSelection, SelectState.INITIATE, false);
+                                }
+                            }
+
+                        }
+
+                        bMovementSelection = !bMovementSelection;
+                    }
+                }
+
+                if (Input.GetKeyDown(KeyCode.T))
+                {
+                    foreach (GameObject attackObject in unitsToAttack)
+                    {
+                        if (!unitsToMove.Contains(attackObject))
+                        {
+                            Attack attack = attackObject.GetComponent<Attack>();
+                            attack.ArmTilesForAttack();
+                        }
+                    }
+
+                    foreach (GameObject moveObject in unitsToMove)
+                    {
+                        Movement movement = moveObject.GetComponent<Movement>();
+                        Debug.Log("Move units");
+                        movement.ReturnToStart();
+                        movement.Move();
+                    }
+
+                    runningTurn = true;
+                }
+
+                if (Input.GetMouseButtonDown(0))
+                {
+                    Movement movement;
+
+                    if (selectedTile && surroundingTiles.Contains(selectedTile))   //surroundTiles only populated if
+                    {                                                              //selectable object was selected in previous frame
+                        Attack unitAttack = selectedObject.GetComponent<Attack>();
+                        movement = selectedObject.GetComponent<Movement>();
+                        Selectable selectedObjectSelectable = selectedObject.GetComponent<Selectable>();
+
+                        if (bMovementSelection)
+                        {
+                            movement = selectedObject.GetComponent<Movement>();
+                            movement.SetDestination(selectedTile.transform.position);
+                            ClearSelection(false);
+                            selectedObjectSelectable.Select(SelectState.OFF);
+                            selectedObject = null;                                     //previous selected object performed action... deselect
+                            unitAttack.ClearAttack();
+                            unitsToMove.Add(movement.gameObject);
+                            movement.TileDestination = selectedTile;
+                        }
+
+                        else
+                        {
+
+                            MapSelection attackTiles = GenerateSelectionBetweenTwoTiles(movement.GetCurrentTileLocation(), selectedTile);
+
+                            if (unitAttack)
+                            {
+                                unitAttack.ClearAttack();
+                                List<Tile> tempAttackTiles = new List<Tile>();
+
+                                ClearSelection(false);
+                                selectedObjectSelectable.Select(SelectState.OFF);
+                                selectedObject = null;
+
+                                TileHighlight(movement.GetCurrentTileLocation(), tempAttackTiles, attackTiles, SelectState.ATTACK, false);
+
+                                foreach (Tile tile in tempAttackTiles)
+                                {
+                                    unitAttack.AddCombatTile(tile);
+                                }
+
+                                if (!unitsToAttack.Contains(unitAttack.gameObject)) unitsToAttack.Add(unitAttack.gameObject);
+                            }
+                        }
+
+
+                    }
+
+                    else
+                    {
+                        movement = selectable.gameObject.GetComponent<Movement>();
+
+                        ClearSelection(false);
+
+
+
+                        if (selectedObject)
+                        {
+                            Selectable selectedObjectSelectable = selectedObject.GetComponent<Selectable>();
+                            selectedObjectSelectable.Select(SelectState.OFF);
+                        }
+
+                        if (movement)
+                        {
+                            selectedObject = hitObject;                                             //new object selected
+                            bMovementSelection = true;
+                            mapCamera.ChangeFocalPoint(selectedObject.transform.position);
+                            selectable.Select(SelectState.HOVERON);
+                            TileHighlight(movement.TileStartPosition, surroundingTiles, movement.MovementSelection, SelectState.INITIATE, false);
+                        }
+
+                        else selectedObject = null;                                     //an unselectable object was clicked clear current selection
+                    }
+
+                }
+
+                else
+                {
+                    if (selectedTile)
+                    {
+                        if (surroundingTiles.Contains(selectedTile))
+                        {
+                            selectable.Select(SelectState.HOVERON);                     //current hover object acceptable as action for 
+                            hoverSelect.Add(selectable);                                //currently selected object
+
+                            if (selectedObject && !bMovementSelection)
+                            {
+                                Movement movement = selectedObject.GetComponent<Movement>();
+
+                                if (movement)
+                                {
+                                    Tile startingTile = movement.GetCurrentTileLocation();
+
+                                    TileHighlight(startingTile, surroundingTiles, GenerateSelectionBetweenTwoTiles(startingTile, selectedTile), SelectState.HOVERON, true);
+
+                                }
+
+                            }
+                        }
+
+
+                    }
+
+                    else
+                    {
+
+                        hoverSelect.Add(selectable);
+                        if (hoverSelect[0].gameObject != selectedObject)
+                        {
+                            selectable.Select(SelectState.INITIATE);
+                        }
+
+
+                    }
+                }
+            }
+        }
+    }
+    */
     void ClearSelection(bool allowAttackOverride)
     {
         foreach (Tile tile in surroundingTiles)
-        {
-            Debug.Log("Clear tile");
+        {           
             Selectable tileSelectable = tile.GetComponent<Selectable>();
 
             if (tileSelectable)
@@ -380,10 +628,10 @@ public class Map : MonoBehaviour
                 }
 
 
-                if (map.ContainsKey(adjustedTileLocation))
+                if (mapData.ContainsKey(adjustedTileLocation))
                 {
 
-                    surroundingTile = map[adjustedTileLocation];
+                    surroundingTile = mapData[adjustedTileLocation];
                     if (Vector3.Distance(surroundingTile.transform.position, previousTileLocation) < (tileSize.x * 2.0f))
                     {
                         Selectable selectable = surroundingTile.GetComponent<Selectable>();
@@ -448,7 +696,7 @@ public class Map : MonoBehaviour
     }
 
 
-    void TileHighlight(Tile start, List<Tile> tileGroup, MapSelection selection, SelectState selectStateToUse, bool allowAttackOverride)
+    public void TileHighlight(Tile start, List<Tile> tileGroup, MapSelection selection, SelectState selectStateToUse, bool allowAttackOverride = true)
     {
         Tile selectedTile = start;
 
@@ -476,10 +724,10 @@ public class Map : MonoBehaviour
 
                 adjustedTileLocation = (mapIndexY << 16) | mapIndexX;               
 
-                if (map.ContainsKey(adjustedTileLocation))
+                if (mapData.ContainsKey(adjustedTileLocation))
                 {
 
-                    surroundingTile = map[adjustedTileLocation];
+                    surroundingTile = mapData[adjustedTileLocation];
              //       if (Vector3.Distance(surroundingTile.transform.position, previousTileLocation) < (tileSize.x * 2.0f))
               //      {
                         Selectable selectable = surroundingTile.GetComponent<Selectable>();

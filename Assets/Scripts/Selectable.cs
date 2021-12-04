@@ -30,6 +30,9 @@ public class Selectable : MonoBehaviour
     
         switch (selectState)
         {
+            case SelectState.NOCHANGE:
+                return;
+
             case SelectState.OFF:
                 currentState = SelectState.OFF;
                 meshRenderer.material = defaultMaterial;
@@ -61,6 +64,7 @@ public class Selectable : MonoBehaviour
 public enum SelectState
 {
     OFF,
+    NOCHANGE,
     INITIATE,
     ATTACK,
     HOVERON,

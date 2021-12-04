@@ -12,22 +12,46 @@ public class Tile : MonoBehaviour
     MeshRenderer meshRenderer;
     Material defaultMaterial;
     List<Attack> targetForAttacks = new List<Attack>();
+    BoxCollider boxCollider;
 
     private void Start()
     {
-
+        boxCollider = GetComponent<BoxCollider>();
         meshRenderer = GetComponent<MeshRenderer>();
         defaultMaterial = meshRenderer.material;
     }
 
+    private void Update()
+    {
+        
+    }
+
+    IEnumerator FlipCollision()
+    {
+        while(true)
+        {
+            boxCollider.enabled = !boxCollider.enabled;
+            boxCollider.enabled = !boxCollider.enabled;
+            yield return new WaitForSeconds(5f);
+        }
+    }
+
     public void Mark(Attack attack)
     {
+        Debug.Log("Tile Marked for Attack");
         targetForAttacks.Add(attack);
+    }
+
+    public void AttackAvailableTargets()
+    {
+        boxCollider.enabled = false;
+        boxCollider.enabled = true;
     }
    
     public void ClearTarget(Attack attack)
     {
         if(targetForAttacks.Contains(attack)) targetForAttacks.Remove(attack);
+        Debug.Log("Attack cleared");
     }
 
     public List<Attack> GetAttacks(int team)

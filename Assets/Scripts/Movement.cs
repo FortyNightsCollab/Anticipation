@@ -18,6 +18,8 @@ public class Movement : MonoBehaviour
     Tile tileDestination;
     public Tile TileDestination { get { return tileDestination; } set { tileDestination = value; } }
 
+    List<Tile> tilesInRange = new List<Tile>();
+
     Vector3 destination;
     float destinationDistance;
 
@@ -30,8 +32,20 @@ public class Movement : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        movementSelection = new MapSelection(new RowOffest(-movementSpaces, -movementSpaces), (movementSpaces*2)+1, (movementSpaces * 2) + 1);
+        movementSelection = new MapSelection(new RowOffest(-movementSpaces, -movementSpaces), (movementSpaces * 2) + 1, (movementSpaces * 2) + 1);
     }
+
+
+    public void RefreshTilesInRange(Map map)
+    {
+        map.TileHighlight(tileLocation, tilesInRange, movementSelection, SelectState.NOCHANGE);
+    }
+
+    public List<Tile> GetTilesInRange()
+    {
+        return tilesInRange;
+    }
+
 
     private void Update()
     {
@@ -79,6 +93,11 @@ public class Movement : MonoBehaviour
         return tileLocation;
     }
 
+    public void SetCurrentTileLocation(Tile newTileLocation)
+    {
+        tileLocation = newTileLocation;
+    }
+
     public void SetDestination(Vector3 newDestination)
     {
         destination = newDestination;
@@ -102,7 +121,18 @@ public class Movement : MonoBehaviour
 
     public void SetNewTurnPosition()
     {
-        tileStartPosition = tileLocation; 
+        tileStartPosition = tileLocation;
+        turnStartPosition = gameObject.transform.position;
+        Debug.Log("Setting new start location");
+    }
+
+    public void Highlight(bool on)
+    {
+        foreach(Tile tile in tilesInRange)
+        {
+            Selectable tileSelectable = tile.GetComponent<Selectable>();
+            tileSelectable.Select(SelectState.INITIATE);
+        }
     }
 
     private void OnTriggerEnter(Collider collider)
@@ -120,6 +150,7 @@ public class Movement : MonoBehaviour
             }
 
             List<Attack> attacksQueued = tileSteppedOn.GetAttacks(0);
+            Debug.Log("number of attacks assigned: " + attacksQueued.Count);
             if(attacksQueued.Count > 0)
             {
                 foreach(Attack attack in attacksQueued)
