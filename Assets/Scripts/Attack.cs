@@ -11,7 +11,6 @@ public class Attack : MonoBehaviour
     MapSelection[] attackSelection;
     List<Tile> combatTiles = new List<Tile>();
     public List<Tile> CombatTiles { get { return combatTiles; } }
-
     public List<Tile> tilesInRange = new List<Tile>();
 
 
@@ -111,6 +110,57 @@ Vector3 destination;
     public MapSelection GetMapSelection(int direction)
     {
         return attackSelection[direction];
+    }
+
+    public void SetAttack(Tile targetTile, Tile attackStart)
+    {
+        if(tilesInRange.Contains(targetTile))
+        {
+            int targetTileX = targetTile.Location & 0x0000FFFF;
+            int targetTileY = (targetTile.Location & 0x7FFF0000) >> 16;
+            int attackStartX = attackStart.Location & 0x0000FFFF;
+            int attackStartY = (attackStart.Location & 0x7FFF0000) >> 16;
+
+            switch(attackShape)
+            {
+                case AttackShape.LINE:
+                    int differenceX = targetTileX - attackStartX;
+                    int differenceY = targetTileY - attackStartY;
+
+                    if(Mathf.Abs(differenceY) == 0)
+                    {
+                        foreach (Tile tile in tilesInRange)
+                        {
+                            int tileX = tile.Location & 0x0000FFFF;
+                            int tileY = (tile.Location & 0x7FFF0000) >> 16;
+
+                            if (tileY == attackStartY)
+                            {
+                                if (differenceX > 0)
+                                {
+                                    if (tileX > attackStartX && tileX <= targetTileX)
+                                    {
+                                        AddCombatTile(tile);
+                                        Debug.Log("Added Tile to Combat Tiles");
+                                    }
+                                }
+
+                                else
+                                {
+                                    if (tileX < attackStartX && tileX >= targetTileX)
+                                    {
+                                        AddCombatTile(tile);
+                                        Debug.Log("Added Tile to Combat Tiles");
+                                    }
+                                }
+
+                                
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
     }
 
     void GenerateDirectionSelections()

@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class Map : MonoBehaviour
 {
-
     [SerializeField] GameObject flatTile;
     [SerializeField] int width;
     public int Width { get { return width; } }
@@ -107,8 +106,6 @@ public class Map : MonoBehaviour
         RaycastHit hitData = mapCamera.GetRayHitResult();
         GameObject hitObject;
 
-        if(hitData.collider.gameObject)
-
         if (hoverSelect.Count > 0)                                                            //Check for a previous hover selection
         {
           
@@ -118,9 +115,7 @@ public class Map : MonoBehaviour
             {                                                                       //potential action selections
                 foreach (Selectable selectable in hoverSelect)
                 {
-                    if (selectable.CurrentState != SelectState.ATTACK) selectable.Select(SelectState.INITIATE);
-
-                    else selectable.Select(SelectState.HOVEROFF);
+                   hoverTile.Select(SelectState.HOVEROFF);
                 }
             }
 
@@ -134,6 +129,17 @@ public class Map : MonoBehaviour
             hoverSelect.Clear();                                                   //hover selection deselected every frame 
         }
 
+        if (Input.GetKeyDown(KeyCode.A))
+        {
+           
+            if (selectedUnit)
+            {
+                selectedUnit.NextAction();
+                Debug.Log("Next Action");
+            }
+            
+        }
+
         if (hitData.collider)                                                      //If raycast hit something
         {
             hitObject = hitData.collider.gameObject;                               
@@ -145,43 +151,6 @@ public class Map : MonoBehaviour
                 selectable.Select(SelectState.HOVERON);
                 hoverSelect.Add(selectable);     
                 Tile selectedTile = selectable.gameObject.GetComponent<Tile>();
-
-                if (Input.GetKeyDown(KeyCode.A))
-                {
-                    if (selectedObject != null)
-                    {
-                        ClearSelection(false);
-                        Unit selectedUnit = selectedObject.GetComponent<Unit>();
-
-                        if (selectedUnit)
-                        {
-
-                            if (bMovementSelection)
-                            {
-
-                                Attack attack = selectedUnit.GetComponent<Attack>();
-                                Movement movement = selectedObject.GetComponent<Movement>();
-
-                                selectedUnit.NextAction();
-                            
-                            }
-
-
-                            else
-                            {
-
-                                Movement movement = selectedObject.GetComponent<Movement>();
-
-                                selectedUnit.NextAction();
-
-                    
-
-                            }
-
-                            bMovementSelection = !bMovementSelection;
-                        }
-                    }
-                }
 
                 if (Input.GetKeyDown(KeyCode.T))
                 {
@@ -209,364 +178,36 @@ public class Map : MonoBehaviour
                 {
                     if(selectedUnit)
                     {
-                        selectedUnit.ProcessAction(hitObject);
+                        if (!selectedUnit.ProcessAction(hitObject))
+                        {
+                            selectedUnit.Select(false);
+                            selectedUnit = null;
+                        }
                     }
 
-                    else
+                    //another if is intentional
+                    if(!selectedUnit)       
                     {
-
-                    }
-                    Movement movement;
-                        
-                    if (selectedTile && surroundingTiles.Contains(selectedTile))   //surroundTiles only populated if
-                    {                                                              //selectable object was selected in previous frame
-                        Attack unitAttack = selectedObject.GetComponent<Attack>();
-                        movement = selectedObject.GetComponent<Movement>();
-                        Selectable selectedObjectSelectable = selectedObject.GetComponent<Selectable>();
-
-                        if (bMovementSelection)
-                        {
-                            movement = selectedObject.GetComponent<Movement>();                          
-                            movement.SetDestination(selectedTile.transform.position);
-                            ClearSelection(false);
-                            selectedObjectSelectable.Select(SelectState.OFF);
-                            selectedObject = null;                                     //previous selected object performed action... deselect
-                            unitAttack.ClearAttack();
-                            unitsToMove.Add(movement.gameObject);
-                            movement.TileDestination = selectedTile;
-                        }
-
-                        else
-                        {
-
-                            MapSelection attackTiles = GenerateSelectionBetweenTwoTiles(movement.GetCurrentTileLocation(), selectedTile);
-                            
-                            if (unitAttack)
-                            {
-                                unitAttack.ClearAttack();
-                                List<Tile> tempAttackTiles = new List<Tile>();                                 
-
-                                ClearSelection(false);
-                                selectedObjectSelectable.Select(SelectState.OFF);
-                                selectedObject = null;
-                                
-                                TileHighlight(movement.GetCurrentTileLocation(), tempAttackTiles, attackTiles, SelectState.ATTACK, false);
-                                
-                                foreach(Tile tile in tempAttackTiles)
-                                {
-                                    unitAttack.AddCombatTile(tile);
-                                }
-
-                                if (!unitsToAttack.Contains(unitAttack.gameObject)) unitsToAttack.Add(unitAttack.gameObject);
-                            }
-                        }
-
-                        
-                    }                                                              
-
-                    else                                                              
-                    {                                                                  
-
                         Unit unitToSelect = selectable.gameObject.GetComponent<Unit>();
-                                                                                       
-                        ClearSelection(false);
-                        
-                        if (selectedObject)
-                        {
-                            Selectable selectedObjectSelectable = selectedObject.GetComponent<Selectable>();
-                            selectedObjectSelectable.Select(SelectState.OFF);
-                        }
 
-                        if(unitToSelect)
+                        if (unitToSelect)
                         {
-                            unitToSelect.Select();
-                            selectedObject = hitObject;                                             //new object selected
-                            bMovementSelection = true;
-                            mapCamera.ChangeFocalPoint(selectedObject.transform.position);
+                            unitToSelect.Select(true);
+                            selectedUnit = unitToSelect;
+                            mapCamera.ChangeFocalPoint(selectedUnit.gameObject.transform.position);
                             selectable.Select(SelectState.HOVERON);
                         }
-
-                   
-
-                        else selectedObject = null;                                     //an unselectable object was clicked clear current selection
-                    }                                
+                    }
+                                                                                                                                     
 
                 }
                     
-                else
-                {
-                    if(selectedTile && selectedTile.SelectableForAction())
-                    {
-                        selectedTile.Select(SelectState.HOVERON);
-          //              hoverSelect.Add
-                        
-                        if(surroundingTiles.Contains(selectedTile))
-                        {
-                            selectable.Select(SelectState.HOVERON);                     //current hover object acceptable as action for 
-                            hoverSelect.Add(selectable);                                //currently selected object
-
-                            if (selectedObject && !bMovementSelection)
-                            {
-                                Movement movement = selectedObject.GetComponent<Movement>();
-
-                                if (movement)
-                                {
-                                    Tile startingTile = movement.GetCurrentTileLocation();
-
-                                    TileHighlight(startingTile, surroundingTiles, GenerateSelectionBetweenTwoTiles(startingTile, selectedTile), SelectState.HOVERON, true);
-
-                                }
-
-                            }
-                        }
-
-                     
-                    }
-
-                    else
-                    {
-                                                 
-                        hoverSelect.Add(selectable);
-                        if (hoverSelect[0].gameObject != selectedObject)
-                        {
-                            selectable.Select(SelectState.INITIATE);                            
-                        }
-                        
-                        
-                    }
-                }
                 
             } 
             
         }
     }
-
-    /*
-    void SetupTurn()
-    {
-        RaycastHit hitData = mapCamera.GetRayHitResult();
-        GameObject hitObject;
-
-        if (hoverSelect.Count > 0)                                                            //Check for a previous hover selection
-        {
-
-            Tile hoverTile = hoverSelect[0].gameObject.GetComponent<Tile>();
-
-            if (hoverTile)                                                          //If previous hover selection part of 
-            {                                                                       //potential action selections
-                foreach (Selectable selectable in hoverSelect)
-                {
-                    if (selectable.CurrentState != SelectState.ATTACK) selectable.Select(SelectState.INITIATE);
-
-                    else selectable.Select(SelectState.HOVEROFF);
-                }
-            }
-
-            else                                                                   //Otherwise turn selection completely off
-            {
-                foreach (Selectable selectable in hoverSelect)
-                {
-                    selectable.Select(SelectState.HOVEROFF);
-                }
-            }
-            hoverSelect.Clear();                                                   //hover selection deselected every frame 
-        }
-
-        if (hitData.collider)                                                      //If raycast hit something
-        {
-            hitObject = hitData.collider.gameObject;
-
-            Selectable selectable = hitObject.GetComponent<Selectable>();
-
-            if (selectable)                                                        //If hit object is selectable      
-            {
-                Tile selectedTile = selectable.gameObject.GetComponent<Tile>();
-
-                if (Input.GetKeyDown(KeyCode.A))
-                {
-                    if (selectedObject != null)
-                    {
-                        ClearSelection(false);
-                        if (bMovementSelection)
-                        {
-
-                            Attack attack = selectedObject.GetComponent<Attack>();
-                            Movement movement = selectedObject.GetComponent<Movement>();
-
-                            if (attack)
-                            {
-                                for (int i = 0; i < 8; i++)
-                                {
-                                    TileHighlight(movement.GetCurrentTileLocation(), surroundingTiles, attack.GetMapSelection(i), SelectState.INITIATE, false);
-                                }
-                            }
-
-
-                        }
-
-
-                        else
-                        {
-
-                            Movement movement = selectedObject.GetComponent<Movement>();
-
-                            if (movement)
-                            {
-                                for (int i = 0; i < 8; i++)
-                                {
-                                    TileHighlight(movement.TileStartPosition, surroundingTiles, movement.MovementSelection, SelectState.INITIATE, false);
-                                }
-                            }
-
-                        }
-
-                        bMovementSelection = !bMovementSelection;
-                    }
-                }
-
-                if (Input.GetKeyDown(KeyCode.T))
-                {
-                    foreach (GameObject attackObject in unitsToAttack)
-                    {
-                        if (!unitsToMove.Contains(attackObject))
-                        {
-                            Attack attack = attackObject.GetComponent<Attack>();
-                            attack.ArmTilesForAttack();
-                        }
-                    }
-
-                    foreach (GameObject moveObject in unitsToMove)
-                    {
-                        Movement movement = moveObject.GetComponent<Movement>();
-                        Debug.Log("Move units");
-                        movement.ReturnToStart();
-                        movement.Move();
-                    }
-
-                    runningTurn = true;
-                }
-
-                if (Input.GetMouseButtonDown(0))
-                {
-                    Movement movement;
-
-                    if (selectedTile && surroundingTiles.Contains(selectedTile))   //surroundTiles only populated if
-                    {                                                              //selectable object was selected in previous frame
-                        Attack unitAttack = selectedObject.GetComponent<Attack>();
-                        movement = selectedObject.GetComponent<Movement>();
-                        Selectable selectedObjectSelectable = selectedObject.GetComponent<Selectable>();
-
-                        if (bMovementSelection)
-                        {
-                            movement = selectedObject.GetComponent<Movement>();
-                            movement.SetDestination(selectedTile.transform.position);
-                            ClearSelection(false);
-                            selectedObjectSelectable.Select(SelectState.OFF);
-                            selectedObject = null;                                     //previous selected object performed action... deselect
-                            unitAttack.ClearAttack();
-                            unitsToMove.Add(movement.gameObject);
-                            movement.TileDestination = selectedTile;
-                        }
-
-                        else
-                        {
-
-                            MapSelection attackTiles = GenerateSelectionBetweenTwoTiles(movement.GetCurrentTileLocation(), selectedTile);
-
-                            if (unitAttack)
-                            {
-                                unitAttack.ClearAttack();
-                                List<Tile> tempAttackTiles = new List<Tile>();
-
-                                ClearSelection(false);
-                                selectedObjectSelectable.Select(SelectState.OFF);
-                                selectedObject = null;
-
-                                TileHighlight(movement.GetCurrentTileLocation(), tempAttackTiles, attackTiles, SelectState.ATTACK, false);
-
-                                foreach (Tile tile in tempAttackTiles)
-                                {
-                                    unitAttack.AddCombatTile(tile);
-                                }
-
-                                if (!unitsToAttack.Contains(unitAttack.gameObject)) unitsToAttack.Add(unitAttack.gameObject);
-                            }
-                        }
-
-
-                    }
-
-                    else
-                    {
-                        movement = selectable.gameObject.GetComponent<Movement>();
-
-                        ClearSelection(false);
-
-
-
-                        if (selectedObject)
-                        {
-                            Selectable selectedObjectSelectable = selectedObject.GetComponent<Selectable>();
-                            selectedObjectSelectable.Select(SelectState.OFF);
-                        }
-
-                        if (movement)
-                        {
-                            selectedObject = hitObject;                                             //new object selected
-                            bMovementSelection = true;
-                            mapCamera.ChangeFocalPoint(selectedObject.transform.position);
-                            selectable.Select(SelectState.HOVERON);
-                            TileHighlight(movement.TileStartPosition, surroundingTiles, movement.MovementSelection, SelectState.INITIATE, false);
-                        }
-
-                        else selectedObject = null;                                     //an unselectable object was clicked clear current selection
-                    }
-
-                }
-
-                else
-                {
-                    if (selectedTile)
-                    {
-                        if (surroundingTiles.Contains(selectedTile))
-                        {
-                            selectable.Select(SelectState.HOVERON);                     //current hover object acceptable as action for 
-                            hoverSelect.Add(selectable);                                //currently selected object
-
-                            if (selectedObject && !bMovementSelection)
-                            {
-                                Movement movement = selectedObject.GetComponent<Movement>();
-
-                                if (movement)
-                                {
-                                    Tile startingTile = movement.GetCurrentTileLocation();
-
-                                    TileHighlight(startingTile, surroundingTiles, GenerateSelectionBetweenTwoTiles(startingTile, selectedTile), SelectState.HOVERON, true);
-
-                                }
-
-                            }
-                        }
-
-
-                    }
-
-                    else
-                    {
-
-                        hoverSelect.Add(selectable);
-                        if (hoverSelect[0].gameObject != selectedObject)
-                        {
-                            selectable.Select(SelectState.INITIATE);
-                        }
-
-
-                    }
-                }
-            }
-        }
-    }
-    */
+    
     void ClearSelection(bool allowAttackOverride)
     {
         foreach (Tile tile in surroundingTiles)

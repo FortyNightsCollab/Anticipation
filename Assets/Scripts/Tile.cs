@@ -71,6 +71,15 @@ public class Tile : MonoBehaviour
                 selectable.Select(newSelectState);
                 break;
 
+            case SelectState.ATTACK:
+                selectable.IsSelectable = true;
+                selectable.Select(newSelectState);
+                break;
+
+            case SelectState.HOVEROFF:
+                selectable.Select(SelectState.HOVEROFF);
+                break;
+
             case SelectState.OFF:
                 selectable.Select(newSelectState);
                 selectable.IsSelectable = false;

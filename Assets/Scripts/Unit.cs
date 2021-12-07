@@ -10,6 +10,7 @@ public class Unit : MonoBehaviour
     int teamNum;
     Movement movement;
     Attack attack;
+    Selectable selectable;
     Map map;
     bool selectedForMovement;
 
@@ -19,6 +20,7 @@ public class Unit : MonoBehaviour
         map = FindObjectOfType<Map>();
         attack = GetComponent<Attack>();
         movement = GetComponent<Movement>();
+        selectable = GetComponent<Selectable>();
      
     }
 
@@ -28,11 +30,21 @@ public class Unit : MonoBehaviour
         
     }
 
-    public void Select()
+    public void Select(bool on)
     {
-        movement.Highlight(true);
-        selectedForMovement = true;
+        if (on)
+        {
+            movement.Highlight(true);
+            selectedForMovement = true;
+        }
+
+        else
+        {
+            movement.Highlight(false);
+            selectable.Select(SelectState.OFF);
+        }
     }
+   
 
     public void NextAction()
     {
@@ -58,13 +70,14 @@ public class Unit : MonoBehaviour
         {
             if(selectedForMovement)
             {
-                movement.SetDestination(tile.transform.position);
+                movement.SetDestination(tile.transform.position);               
             }
 
             else
             {
-           
+                attack.SetAttack(tile, movement.GetCurrentTileLocation());
             }
+            return true;
         }
         return false;
     }
