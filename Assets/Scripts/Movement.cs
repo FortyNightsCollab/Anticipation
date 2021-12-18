@@ -6,7 +6,8 @@ public class Movement : MonoBehaviour
 {
     [SerializeField] int movementSpaces;
     [SerializeField] float speed;
-
+    [SerializeField] GameObject pathPoint;
+    
     MapSelection movementSelection;
     public MapSelection MovementSelection { get { return movementSelection; } }
     List<Tile> motionTiles = new List<Tile>();
@@ -25,6 +26,8 @@ public class Movement : MonoBehaviour
 
     Vector3 turnStartPosition;
 
+    List<GameObject> path = new List<GameObject>();
+
     Tile tileLocation;
     bool enroute;
     public bool Enroute { get { return enroute; } }
@@ -35,9 +38,9 @@ public class Movement : MonoBehaviour
         movementSelection = new MapSelection(new RowOffest(-movementSpaces, -movementSpaces), (movementSpaces * 2) + 1, (movementSpaces * 2) + 1);
     }
 
-
     public void RefreshTilesInRange(Map map)
     {
+        tilesInRange.Clear();
         map.TileHighlight(tileLocation, tilesInRange, movementSelection, SelectState.NOCHANGE);
     }
 
@@ -45,7 +48,6 @@ public class Movement : MonoBehaviour
     {
         return tilesInRange;
     }
-
 
     private void Update()
     {
@@ -76,16 +78,14 @@ public class Movement : MonoBehaviour
 
     public void SteppedOnTile(Tile tile)
     {
-        Debug.Log("Step");
-       
+        Debug.Log("Step");      
 
         tileLocation = tile;
     }
 
     public void ReturnToStart()
     {
-        transform.position = turnStartPosition;
-        
+        transform.position = turnStartPosition;      
     }
 
     public Tile GetCurrentTileLocation()
@@ -98,15 +98,23 @@ public class Movement : MonoBehaviour
         tileLocation = newTileLocation;
     }
 
-    public void SetDestination(Vector3 newDestination)
+    public void SetDestination(Tile newDestination, Map map)
     {
-        destination = newDestination;
+        destination = newDestination.transform.position;
+        destination.y = transform.position.y;
+
+        CalculatePath(newDestination, map);
+
+      
+        /*
+        destination = newDestination.transform.position;
         destination.y = transform.position.y;
         Vector3 currentPosition = gameObject.transform.position;
 
         destinationDistance = Vector3.Distance(destination, currentPosition);
 
         enroute = true;
+        */
     }
 
     public void Move()
@@ -114,9 +122,8 @@ public class Movement : MonoBehaviour
         Collider movementCollider = gameObject.GetComponent<BoxCollider>();
         movementCollider.enabled = false;
         
-        SetDestination(tileDestination.gameObject.transform.position);
+   //     SetDestination(tileDestination);
         movementCollider.enabled = true;
-
     }
 
     public void SetNewTurnPosition()
@@ -141,8 +148,7 @@ public class Movement : MonoBehaviour
         Debug.Log("Stepped On: " + collider.gameObject);
 
         if (tileSteppedOn)
-        {
-            
+        {          
             if (tileLocation == null)
             {
                 tileStartPosition = tileSteppedOn;
@@ -158,11 +164,74 @@ public class Movement : MonoBehaviour
                     attack.Use(tileSteppedOn);
                 }
 
-                SetDestination(tileSteppedOn.transform.position);
+  //              SetDestination(tileSteppedOn);
             }
-
             tileLocation = tileSteppedOn;
         }
+    }
+
+    IEnumerator RenderPath(List<Vector3> calculatedPath)
+    {
+        foreach (Vector3 position in calculatedPath)
+        {
+           
+            GameObject generatedPoint = Instantiate(pathPoint, position, Quaternion.identity);
+            if (generatedPoint)
+            {
+                path.Add(generatedPoint);
+                Debug.Log("Point added at: " + position);
+            }
+            yield return new WaitForSeconds(0.25f);
+        }
+    }
+
+    private void CalculatePath(Tile destinationTile, Map map)
+    {
+        List<Vector3> calculatedPath = new List<Vector3>();
+
+        if (tilesInRange.Contains(destinationTile))
+        {
+            //Get map indices of start/destination tiles
+            int destinationTileX = destinationTile.Location & 0x0000FFFF;
+            int destinationTileY = (destinationTile.Location & 0x7FFF0000) >> 16;
+            int startTileX = tileLocation.Location & 0x0000FFFF;
+            int startTileY = (tileLocation.Location & 0x7FFF0000) >> 16;
+
+            //Find out how far apart in columns and rows
+            int differenceX = destinationTileX - startTileX;
+            int differenceY = destinationTileY - startTileY;
+
+            int nextTileX = startTileX;
+
+            if (Mathf.Abs(differenceY) == 0)
+            {
+                while (Mathf.Abs(differenceX) > 0)
+                {                    
+                    if (differenceX > 0) nextTileX++;
+                    else nextTileX--;
+
+                    foreach (Tile tile in tilesInRange)
+                    {
+                        int tileX = tile.Location & 0x0000FFFF;
+                        int tileY = (tile.Location & 0x7FFF0000) >> 16;
+
+                        if (tileX == nextTileX && tileY == startTileY)
+                        {
+                            Vector3 pointToAdd = tile.transform.position;
+                            pointToAdd.y = transform.position.y;
+
+                            calculatedPath.Add(pointToAdd);
+
+                            if (differenceX > 0) differenceX--;
+                            else differenceX++;
+                        }
+                    }
+                }
+            }
+        }
+
+        StartCoroutine(RenderPath(calculatedPath));
+      
     }
 
 }

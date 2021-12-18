@@ -237,4 +237,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   initiateMaterial: {fileID: 2100000, guid: 608a026c6efe0ad44b75330c48de4488, type: 2}
   confirmMaterial: {fileID: 2100000, guid: 300f83dcd4a902849a69debfea62296c, type: 2}
-  attackMaterial: {fileID: 2100000, guid: f7f55480cc8413044b3550c6adb9a24e, type: 2}
+  attackPotential: {fileID: 2100000, guid: 0f8d9e12144512c49abd6dca2125c8c4, type: 2}
+  attackConfirmed: {fileID: 2100000, guid: f7f55480cc8413044b3550c6adb9a24e, type: 2}

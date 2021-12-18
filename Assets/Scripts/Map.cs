@@ -30,13 +30,9 @@ public class Map : MonoBehaviour
     Vector3 previousMousePosition;
     bool bMovementSelection;
     bool runningTurn = false;
-    
-    
 
-    // Start is called before the first frame update
-    void Start()
+    private void Awake()
     {
-        
         surroundingSelection = new CenteredSelection(2, 1, 2, 1, 2, 1, 2, 1);
         GameObject createdObject;
         Tile createdTile;
@@ -47,25 +43,28 @@ public class Map : MonoBehaviour
 
         for (int y = 0; y < height; y++)
         {
-            for(int x = 0; x < width; x++)
+            for (int x = 0; x < width; x++)
             {
                 createdObject = Instantiate(flatTile, new Vector3(xSize * x, 0.0f, zSize * y), Quaternion.identity);
                 createdTile = createdObject.GetComponent<Tile>();
                 int createdTileLocation;
 
-
-                if (createdTile!=null)
+                if (createdTile != null)
                 {
-                    createdTileLocation = (y << 16);              
+                    createdTileLocation = (y << 16);
                     createdTileLocation |= x;
-                                     
+
                     mapData.Add(createdTileLocation, createdTile);
                     createdTile.Location = createdTileLocation;
                 }
-
             }
         }
-      
+    }
+
+    // Start is called before the first frame update
+    void Start()
+    {       
+        
     }
 
     // Update is called once per frame
@@ -94,11 +93,9 @@ public class Map : MonoBehaviour
             }
             attack.ClearAttack();
         }
-
         unitsToAttack.Clear();
         unitsToMove.Clear();
         runningTurn = false;
-
     }
 
     void SetupTurn()
@@ -107,8 +104,7 @@ public class Map : MonoBehaviour
         GameObject hitObject;
 
         if (hoverSelect.Count > 0)                                                            //Check for a previous hover selection
-        {
-          
+        {          
             Tile hoverTile = hoverSelect[0].gameObject.GetComponent<Tile>();
 
             if (hoverTile)                                                          //If previous hover selection part of 
@@ -130,14 +126,12 @@ public class Map : MonoBehaviour
         }
 
         if (Input.GetKeyDown(KeyCode.A))
-        {
-           
+        {          
             if (selectedUnit)
             {
                 selectedUnit.NextAction();
                 Debug.Log("Next Action");
-            }
-            
+            }          
         }
 
         if (hitData.collider)                                                      //If raycast hit something
@@ -197,14 +191,9 @@ public class Map : MonoBehaviour
                             mapCamera.ChangeFocalPoint(selectedUnit.gameObject.transform.position);
                             selectable.Select(SelectState.HOVERON);
                         }
-                    }
-                                                                                                                                     
-
-                }
-                    
-                
-            } 
-            
+                    }                                                                                                                                  
+                }                                    
+            }             
         }
     }
     
@@ -216,8 +205,8 @@ public class Map : MonoBehaviour
 
             if (tileSelectable)
             {
-                if (tileSelectable.CurrentState != SelectState.ATTACK ||
-                   (tileSelectable.CurrentState == SelectState.ATTACK && allowAttackOverride))
+                if (tileSelectable.CurrentState != SelectState.ATTACKCONFIRMED ||
+                   (tileSelectable.CurrentState == SelectState.ATTACKCONFIRMED && allowAttackOverride))
                 {
                     tileSelectable.Select(SelectState.OFF);
                 }
@@ -277,7 +266,6 @@ public class Map : MonoBehaviour
                         break;
                 }
 
-
                 if (mapData.ContainsKey(adjustedTileLocation))
                 {
 
@@ -300,9 +288,7 @@ public class Map : MonoBehaviour
                     Debug.Log("Tile not found");
                 }
             }
-
-        }
-        
+        }        
     }
 
     MapSelection GenerateSelectionBetweenTwoTiles(Tile startTile, Tile stopTile)
@@ -363,7 +349,6 @@ public class Map : MonoBehaviour
         {
             previousTileLocation = selectedTile.transform.position;
 
-
             for (int i = 0; i < row.width; i++)
             {
               
@@ -376,7 +361,6 @@ public class Map : MonoBehaviour
 
                 if (mapData.ContainsKey(adjustedTileLocation))
                 {
-
                     surroundingTile = mapData[adjustedTileLocation];
              //       if (Vector3.Distance(surroundingTile.transform.position, previousTileLocation) < (tileSize.x * 2.0f))
               //      {
@@ -384,8 +368,8 @@ public class Map : MonoBehaviour
 
                         if (selectable)
                         {
-                            if (selectable.CurrentState != SelectState.ATTACK ||
-                                (selectable.CurrentState == SelectState.ATTACK && allowAttackOverride))
+                            if (selectable.CurrentState != SelectState.ATTACKCONFIRMED ||
+                                (selectable.CurrentState == SelectState.ATTACKCONFIRMED && allowAttackOverride))
                             {
                                 selectable.Select(selectStateToUse);
                             }         
@@ -401,11 +385,7 @@ public class Map : MonoBehaviour
                 {
                     Debug.Log("Tile not found");
                 }
-
-
-            }
-
-            
+            }          
             currentRow++;
             row = selection.GetRow(currentRow);
         }

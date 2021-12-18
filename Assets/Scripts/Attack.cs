@@ -13,8 +13,7 @@ public class Attack : MonoBehaviour
     public List<Tile> CombatTiles { get { return combatTiles; } }
     public List<Tile> tilesInRange = new List<Tile>();
 
-
-Vector3 destination;
+    Vector3 destination;
     float destinationDistance;
 
     Tile tileLocation;
@@ -22,10 +21,8 @@ Vector3 destination;
 
     // Start is called before the first frame update
     void Start()
-    {
-        
-        GenerateDirectionSelections();
-        
+    {        
+        GenerateDirectionSelections();       
     }
 
     private void Update()
@@ -33,17 +30,26 @@ Vector3 destination;
        
     }
 
-    public void Highlight(bool on)
+    public void HighlightTilesInRange(bool on)
     {
         foreach (Tile tile in tilesInRange)
-        {            
-            if (on) tile.Select(SelectState.ATTACK);
-            else tile.Select(SelectState.OFF);
+        {
+            if (!tile.IsMarkedForAttack())
+            {
+                if (on) tile.Select(SelectState.ATTACKPOTENTIAL);
+                else tile.Select(SelectState.OFF);
+            }
         }
+    }
+
+    public void HighlightSelectedAttackTiles(bool on)
+    {
+
     }
 
     public void RefreshTilesInRange(Map map, Tile currentLocation)
     {
+        tilesInRange.Clear();
         for(int i = 0; i < attackSelection.Length; i++)
             map.TileHighlight(currentLocation, tilesInRange, attackSelection[i], SelectState.NOCHANGE);
     }
@@ -112,7 +118,7 @@ Vector3 destination;
         return attackSelection[direction];
     }
 
-    public void SetAttack(Tile targetTile, Tile attackStart)
+    public bool SetAttack(Tile targetTile, Tile attackStart)
     {
         if(tilesInRange.Contains(targetTile))
         {
@@ -141,6 +147,7 @@ Vector3 destination;
                                     if (tileX > attackStartX && tileX <= targetTileX)
                                     {
                                         AddCombatTile(tile);
+                                        tile.Select(SelectState.INITIATE);
                                         Debug.Log("Added Tile to Combat Tiles");
                                     }
                                 }
@@ -150,6 +157,7 @@ Vector3 destination;
                                     if (tileX < attackStartX && tileX >= targetTileX)
                                     {
                                         AddCombatTile(tile);
+                                        tile.Select(SelectState.INITIATE);
                                         Debug.Log("Added Tile to Combat Tiles");
                                     }
                                 }
@@ -159,8 +167,11 @@ Vector3 destination;
                         }
                     }
                     break;
-            }
+            }        
+            return true;
         }
+
+        return false;
     }
 
     void GenerateDirectionSelections()

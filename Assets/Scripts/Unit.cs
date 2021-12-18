@@ -21,7 +21,6 @@ public class Unit : MonoBehaviour
         attack = GetComponent<Attack>();
         movement = GetComponent<Movement>();
         selectable = GetComponent<Selectable>();
-     
     }
 
     // Update is called once per frame
@@ -34,6 +33,7 @@ public class Unit : MonoBehaviour
     {
         if (on)
         {
+            movement.RefreshTilesInRange(map);
             movement.Highlight(true);
             selectedForMovement = true;
         }
@@ -41,6 +41,7 @@ public class Unit : MonoBehaviour
         else
         {
             movement.Highlight(false);
+            attack.HighlightTilesInRange(false);
             selectable.Select(SelectState.OFF);
         }
     }
@@ -51,13 +52,13 @@ public class Unit : MonoBehaviour
         if(selectedForMovement)
         {
             movement.Highlight(false);
-            attack.Highlight(true);
+            attack.HighlightTilesInRange(true);
             selectedForMovement = false;
         }
 
         else
         {            
-            attack.Highlight(false);
+            attack.HighlightTilesInRange(false);
             movement.Highlight(true);
             selectedForMovement = true;
         }
@@ -70,7 +71,8 @@ public class Unit : MonoBehaviour
         {
             if(selectedForMovement)
             {
-                movement.SetDestination(tile.transform.position);               
+                movement.SetDestination(tile, map);
+                
             }
 
             else
@@ -78,6 +80,7 @@ public class Unit : MonoBehaviour
                 attack.SetAttack(tile, movement.GetCurrentTileLocation());
             }
             return true;
+
         }
         return false;
     }
@@ -90,7 +93,6 @@ public class Unit : MonoBehaviour
         if (tileSteppedOn)
         {
             movement.SetCurrentTileLocation(tileSteppedOn);
-            movement.RefreshTilesInRange(map);
             attack.RefreshTilesInRange(map, movement.GetCurrentTileLocation());
         }
     }

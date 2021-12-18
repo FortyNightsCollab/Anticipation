@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Selectable : MonoBehaviour
-{
+{  
     [SerializeField] Material initiateMaterial;
     [SerializeField] Material confirmMaterial;
-    [SerializeField] Material attackMaterial;
+    [SerializeField] Material attackPotential;
+    [SerializeField] Material attackConfirmed;
 
     MeshRenderer meshRenderer;
     Material defaultMaterial;
@@ -47,9 +48,14 @@ public class Selectable : MonoBehaviour
                     meshRenderer.material = initiateMaterial;
                     break;
 
-                case SelectState.ATTACK:
-                    currentState = SelectState.ATTACK;
-                    meshRenderer.material = attackMaterial;
+                case SelectState.ATTACKPOTENTIAL:
+                    currentState = SelectState.ATTACKPOTENTIAL;
+                    meshRenderer.material = attackPotential;
+                    break;
+
+                case SelectState.ATTACKCONFIRMED:
+                    currentState = SelectState.ATTACKCONFIRMED;
+                    meshRenderer.material = attackConfirmed;
                     break;
 
                 case SelectState.HOVERON:
@@ -71,7 +77,8 @@ public enum SelectState
     OFF,
     NOCHANGE,
     INITIATE,
-    ATTACK,
+    ATTACKPOTENTIAL,
+    ATTACKCONFIRMED,
     HOVERON,
     HOVEROFF
 }

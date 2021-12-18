@@ -45,6 +45,12 @@ public class Tile : MonoBehaviour
         targetForAttacks.Add(attack);
     }
 
+    public bool IsMarkedForAttack()
+    {
+        if (targetForAttacks.Count > 0) return true;
+        else return false;
+    }
+
     public void AttackAvailableTargets()
     {
         boxCollider.enabled = false;
@@ -71,10 +77,13 @@ public class Tile : MonoBehaviour
                 selectable.Select(newSelectState);
                 break;
 
-            case SelectState.ATTACK:
+            case SelectState.ATTACKPOTENTIAL:
                 selectable.IsSelectable = true;
                 selectable.Select(newSelectState);
                 break;
+
+            case SelectState.ATTACKCONFIRMED:
+
 
             case SelectState.HOVEROFF:
                 selectable.Select(SelectState.HOVEROFF);
