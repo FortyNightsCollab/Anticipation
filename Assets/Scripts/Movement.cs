@@ -103,18 +103,13 @@ public class Movement : MonoBehaviour
         destination = newDestination.transform.position;
         destination.y = transform.position.y;
 
+        foreach(GameObject point in path)
+        {
+            Destroy(point);
+        }
+
+        path.Clear();
         CalculatePath(newDestination, map);
-
-      
-        /*
-        destination = newDestination.transform.position;
-        destination.y = transform.position.y;
-        Vector3 currentPosition = gameObject.transform.position;
-
-        destinationDistance = Vector3.Distance(destination, currentPosition);
-
-        enroute = true;
-        */
     }
 
     public void Move()
@@ -202,29 +197,66 @@ public class Movement : MonoBehaviour
             int differenceY = destinationTileY - startTileY;
 
             int nextTileX = startTileX;
+            int nextTileY = startTileY;
 
-            if (Mathf.Abs(differenceY) == 0)
+
+            while (Mathf.Abs(differenceX) > 0 || Mathf.Abs(differenceY) > 0)
             {
-                while (Mathf.Abs(differenceX) > 0)
-                {                    
+                bool xMotion = false;
+                bool yMotion = false;
+
+                if (Mathf.Abs(differenceX) > Mathf.Abs(differenceY))
+                {
                     if (differenceX > 0) nextTileX++;
                     else nextTileX--;
 
-                    foreach (Tile tile in tilesInRange)
+                    xMotion = true;
+                }
+
+                else if (Mathf.Abs(differenceX) < Mathf.Abs(differenceY))
+                {
+                    if (differenceY > 0) nextTileY++;
+                    else nextTileY--;
+
+                    yMotion = true;
+                }
+
+                else
+                {
+                    if (differenceX > 0) nextTileX++;
+                    else nextTileX--;
+
+                    if (differenceY > 0) nextTileY++;
+                    else nextTileY--;
+
+                    xMotion = true;
+                    yMotion = true;
+                }
+
+                foreach (Tile tile in tilesInRange)
+                {
+                    int tileX = tile.Location & 0x0000FFFF;
+                    int tileY = (tile.Location & 0x7FFF0000) >> 16;
+
+                    if (tileX == nextTileX && tileY == nextTileY)
                     {
-                        int tileX = tile.Location & 0x0000FFFF;
-                        int tileY = (tile.Location & 0x7FFF0000) >> 16;
+                        Vector3 pointToAdd = tile.transform.position;
+                        pointToAdd.y = transform.position.y;
 
-                        if (tileX == nextTileX && tileY == startTileY)
+                        calculatedPath.Add(pointToAdd);
+
+                        if (xMotion)
                         {
-                            Vector3 pointToAdd = tile.transform.position;
-                            pointToAdd.y = transform.position.y;
-
-                            calculatedPath.Add(pointToAdd);
-
                             if (differenceX > 0) differenceX--;
                             else differenceX++;
                         }
+
+                        if (yMotion)
+                        {
+                            if (differenceY > 0) differenceY--;
+                            else differenceY++;
+                        }
+                        break;
                     }
                 }
             }
