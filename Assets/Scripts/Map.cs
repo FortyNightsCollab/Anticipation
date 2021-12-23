@@ -136,64 +136,100 @@ public class Map : MonoBehaviour
 
         if (hitData.collider)                                                      //If raycast hit something
         {
-            hitObject = hitData.collider.gameObject;                               
-           
-            Selectable selectable = hitObject.GetComponent<Selectable>();   
-                       
-            if (selectable && selectable.IsSelectable)                                                        //If hit object is selectable      
+            hitObject = hitData.collider.gameObject;
+
+            Unit unit = hitObject.GetComponent<Unit>();
+            Selectable selectable = hitObject.GetComponent<Selectable>();
+
+            //If hover over object is a unit allow selection or if there is a selectedUnit pass the object to the unit for processing
+            if (selectedUnit || unit)
             {
-                selectable.Select(SelectState.HOVERON);
-                hoverSelect.Add(selectable);     
-                Tile selectedTile = selectable.gameObject.GetComponent<Tile>();
-
-                if (Input.GetKeyDown(KeyCode.T))
+                                  
+                if (selectedUnit)
                 {
-                    foreach(GameObject attackObject in unitsToAttack)
+                    if(!selectedUnit.ProcessAction(hitObject))
                     {
-                        if (!unitsToMove.Contains(attackObject))
-                        {
-                            Attack attack = attackObject.GetComponent<Attack>();
-                            attack.ArmTilesForAttack();
-                        }
-                    }
+                        //clicked on something that was not pertinent to the selected unit
+                        //deselected it
 
-                    foreach(GameObject moveObject in unitsToMove)
-                    {
-                        Movement movement = moveObject.GetComponent<Movement>();
-                        Debug.Log("Move units");
-                        movement.ReturnToStart();
-                        movement.Move();
+                        selectedUnit.Select(false);
+                        selectedUnit = null;
                     }
-
-                    runningTurn = true;
                 }
 
-                if (Input.GetMouseButtonDown(0))
+                
+                
+                if (unit)
                 {
-                    if(selectedUnit)
+                    selectable.Select(SelectState.HOVERON);
+
+                    if (Input.GetMouseButtonDown(0))
                     {
-                        if (!selectedUnit.ProcessAction(hitObject))
+                        //current object becomes new selectedUnit
+
+                        unit.Select(true);
+                        selectedUnit = unit;
+                        mapCamera.ChangeFocalPoint(selectedUnit.gameObject.transform.position);
+                    }
+                }
+           
+
+                /*
+                    if (selectable && selectable.IsSelectable)                                                        //If hit object is selectable      
+                {
+                    selectable.Select(SelectState.HOVERON);
+                    hoverSelect.Add(selectable);
+
+                    if (Input.GetKeyDown(KeyCode.T))
+                    {
+                        foreach (GameObject attackObject in unitsToAttack)
                         {
-                            selectedUnit.Select(false);
-                            selectedUnit = null;
+                            if (!unitsToMove.Contains(attackObject))
+                            {
+                                Attack attack = attackObject.GetComponent<Attack>();
+                                attack.ArmTilesForAttack();
+                            }
                         }
+
+                        foreach (GameObject moveObject in unitsToMove)
+                        {
+                            Movement movement = moveObject.GetComponent<Movement>();
+                            Debug.Log("Move units");
+                            movement.ReturnToStart();
+                            movement.Move();
+                        }
+
+                        runningTurn = true;
                     }
 
-                    //another if is intentional
-                    if(!selectedUnit)       
+                    if (Input.GetMouseButtonDown(0))
                     {
-                        Unit unitToSelect = selectable.gameObject.GetComponent<Unit>();
-
-                        if (unitToSelect)
+                        if (selectedUnit)
                         {
-                            unitToSelect.Select(true);
-                            selectedUnit = unitToSelect;
-                            mapCamera.ChangeFocalPoint(selectedUnit.gameObject.transform.position);
-                            selectable.Select(SelectState.HOVERON);
+                            if (!selectedUnit.ProcessAction(hitObject))
+                            {
+                                selectedUnit.Select(false);
+                                selectedUnit = null;
+                            }
                         }
-                    }                                                                                                                                  
-                }                                    
-            }             
+
+                        //another if is intentional
+                        if (!selectedUnit)
+                        {
+                            Unit unitToSelect = selectable.gameObject.GetComponent<Unit>();
+
+                            if (unitToSelect)
+                            {
+                                unitToSelect.Select(true);
+                                selectedUnit = unitToSelect;
+                                mapCamera.ChangeFocalPoint(selectedUnit.gameObject.transform.position);
+                                selectable.Select(SelectState.HOVERON);
+                            }
+                        }
+                    }  
+                }
+                */
+            }
         }
     }
     

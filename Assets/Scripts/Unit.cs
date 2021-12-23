@@ -36,6 +36,7 @@ public class Unit : MonoBehaviour
             movement.RefreshTilesInRange(map);
             movement.Highlight(true);
             selectedForMovement = true;
+            movement.EnablePath(true);
         }
 
         else
@@ -43,6 +44,7 @@ public class Unit : MonoBehaviour
             movement.Highlight(false);
             attack.HighlightTilesInRange(false);
             selectable.Select(SelectState.OFF);
+            movement.EnablePath(false);
         }
     }
    
@@ -52,6 +54,7 @@ public class Unit : MonoBehaviour
         if(selectedForMovement)
         {
             movement.Highlight(false);
+            attack.RefreshTilesInRange(map, movement.TileDestination);
             attack.HighlightTilesInRange(true);
             selectedForMovement = false;
         }
@@ -66,13 +69,22 @@ public class Unit : MonoBehaviour
 
     public bool ProcessAction(GameObject actionObject)
     {
+        bool leftMouseClick = Input.GetMouseButtonDown(0);
+
         Tile tile = actionObject.GetComponent<Tile>();
         if(tile)
         {
             if(selectedForMovement)
             {
-                movement.SetDestination(tile, map);
-                
+                if (leftMouseClick)
+                {
+                    return movement.SetDestination(tile, map);
+                }
+
+                else
+                {
+                    movement.HighlightPotentialPath(tile, map);
+                }
             }
 
             else
@@ -82,7 +94,9 @@ public class Unit : MonoBehaviour
             return true;
 
         }
-        return false;
+
+        if (leftMouseClick) return false;
+        else return true;
     }
 
     private void OnTriggerEnter(Collider collider)

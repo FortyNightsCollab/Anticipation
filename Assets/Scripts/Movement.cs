@@ -27,6 +27,7 @@ public class Movement : MonoBehaviour
     Vector3 turnStartPosition;
 
     List<GameObject> path = new List<GameObject>();
+    List<Tile> potentialPath = new List<Tile>();
 
     Tile tileLocation;
     bool enroute;
@@ -51,29 +52,46 @@ public class Movement : MonoBehaviour
 
     private void Update()
     {
-        if(destinationDistance > 0.0f)
+        if(enroute && path.Count > 0)
         {
             Vector3 currentPosition = gameObject.transform.position;
 
-            Vector3 movementVector = destination - currentPosition;
+            Vector3 movementVector = path[0].transform.position - currentPosition;
 
+            float distanceToDestination = movementVector.magnitude;
             movementVector.Normalize();
             Debug.Log("Speed: " + speed);
             Vector3 frameDistance = movementVector * speed * Time.deltaTime;
-            destinationDistance -= frameDistance.magnitude;
 
-            if(destinationDistance < 0.0f)
+            if(distanceToDestination < 0.01f)
             {
-                enroute = false;
+                Destroy(path[0]);
+                path.RemoveAt(0);
+                if (path.Count <= 0)
+                    enroute = false;
             }
 
-            gameObject.transform.Translate(frameDistance);
+            else
+                gameObject.transform.Translate(frameDistance);
         }
     }
 
     public void AddMotionTile(Tile tileToAdd)
     {
         motionTiles.Add(tileToAdd);
+    }
+
+    
+
+    public void EnablePath(bool enable)
+    {
+        if(path.Count > 0 )
+        {
+            foreach(GameObject point in path)
+            {
+                point.SetActive(enable);
+            }
+        }
     }
 
     public void SteppedOnTile(Tile tile)
@@ -98,18 +116,61 @@ public class Movement : MonoBehaviour
         tileLocation = newTileLocation;
     }
 
-    public void SetDestination(Tile newDestination, Map map)
+    public bool SetDestination(Tile newDestination, Map map)
     {
-        destination = newDestination.transform.position;
-        destination.y = transform.position.y;
-
-        foreach(GameObject point in path)
+        if (tilesInRange.Contains(newDestination))
         {
-            Destroy(point);
+            TileDestination = newDestination;
+            destination = newDestination.transform.position;
+            destination.y = transform.position.y;
+
+            foreach (GameObject point in path)
+            {
+                Destroy(point);
+            }
+
+            path.Clear();
+            StartCoroutine(RenderPath(CalculatePath(newDestination, map)));
+
+            return true;
+        }
+        return false;
+    }
+
+    public bool HighlightPotentialPath(Tile newDestination, Map map)
+    {
+        if (tilesInRange.Contains(newDestination))
+        {
+            if (potentialPath.Count > 0)
+            {
+                foreach (Tile tile in potentialPath)
+                {
+                    Selectable select = tile.GetComponent<Selectable>();
+                    select.Select(SelectState.HOVEROFF);
+                }
+                potentialPath.Clear();
+            }
+            potentialPath = CalculatePath(newDestination, map);
+
+            foreach(Tile tile in potentialPath)
+            {
+                Selectable select = tile.GetComponent<Selectable>();
+                select.Select(SelectState.HOVERON);
+            }
+
+            return true;
         }
 
-        path.Clear();
-        CalculatePath(newDestination, map);
+        else
+        {
+            foreach (Tile tile in potentialPath)
+            {
+                Selectable select = tile.GetComponent<Selectable>();
+                select.Select(SelectState.HOVEROFF);
+            }
+            potentialPath.Clear();
+        }
+        return false;
     }
 
     public void Move()
@@ -119,6 +180,8 @@ public class Movement : MonoBehaviour
         
    //     SetDestination(tileDestination);
         movementCollider.enabled = true;
+
+        enroute = true;
     }
 
     public void SetNewTurnPosition()
@@ -165,24 +228,25 @@ public class Movement : MonoBehaviour
         }
     }
 
-    IEnumerator RenderPath(List<Vector3> calculatedPath)
+    IEnumerator RenderPath(List<Tile> calculatedPath)
     {
-        foreach (Vector3 position in calculatedPath)
+        foreach (Tile tile in calculatedPath)
         {
-           
-            GameObject generatedPoint = Instantiate(pathPoint, position, Quaternion.identity);
+            Vector3 pathPointPosition = tile.transform.position;
+            pathPointPosition.y = transform.position.y;
+
+            GameObject generatedPoint = Instantiate(pathPoint, pathPointPosition, Quaternion.identity);
             if (generatedPoint)
             {
                 path.Add(generatedPoint);
-                Debug.Log("Point added at: " + position);
             }
             yield return new WaitForSeconds(0.25f);
         }
     }
 
-    private void CalculatePath(Tile destinationTile, Map map)
+    private List<Tile> CalculatePath(Tile destinationTile, Map map)
     {
-        List<Vector3> calculatedPath = new List<Vector3>();
+        List<Tile> calculatedPath = new List<Tile>();
 
         if (tilesInRange.Contains(destinationTile))
         {
@@ -240,10 +304,8 @@ public class Movement : MonoBehaviour
 
                     if (tileX == nextTileX && tileY == nextTileY)
                     {
-                        Vector3 pointToAdd = tile.transform.position;
-                        pointToAdd.y = transform.position.y;
-
-                        calculatedPath.Add(pointToAdd);
+                   
+                        calculatedPath.Add(tile);
 
                         if (xMotion)
                         {
@@ -262,7 +324,8 @@ public class Movement : MonoBehaviour
             }
         }
 
-        StartCoroutine(RenderPath(calculatedPath));
+        return calculatedPath;
+        
       
     }
 
