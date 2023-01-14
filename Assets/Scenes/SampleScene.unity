@@ -178,6 +178,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6784676136525517832, guid: 47f64b63174d6f346938825554382442, type: 3}
+      propertyPath: targetMarker
+      value: 
+      objectReference: {fileID: 5534303012355736226, guid: 588b749af09335a4ea32b7bcaafaf7f4, type: 3}
     - target: {fileID: 7913611699524560697, guid: 47f64b63174d6f346938825554382442, type: 3}
       propertyPath: m_Name
       value: Soldier (1)
@@ -298,6 +302,10 @@ PrefabInstance:
       propertyPath: movementSpaces
       value: 4
       objectReference: {fileID: 0}
+    - target: {fileID: 4346119232949263449, guid: 47f64b63174d6f346938825554382442, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6643973291975343263, guid: 47f64b63174d6f346938825554382442, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -342,6 +350,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6784676136525517832, guid: 47f64b63174d6f346938825554382442, type: 3}
+      propertyPath: targetMarker
+      value: 
+      objectReference: {fileID: 5534303012355736226, guid: 588b749af09335a4ea32b7bcaafaf7f4, type: 3}
     - target: {fileID: 7913611699524560697, guid: 47f64b63174d6f346938825554382442, type: 3}
       propertyPath: m_Name
       value: Soldier

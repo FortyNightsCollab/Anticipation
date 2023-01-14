@@ -18,6 +18,11 @@ public class Unit : MonoBehaviour
     void Start()
     {
         map = FindObjectOfType<Map>();
+
+        if(map)
+        {
+            map.RegisterUnit(this);
+        }
         attack = GetComponent<Attack>();
         movement = GetComponent<Movement>();
         selectable = GetComponent<Selectable>();
@@ -33,18 +38,20 @@ public class Unit : MonoBehaviour
     {
         if (on)
         {
-            movement.RefreshTilesInRange(map);
-            movement.Highlight(true);
+            movement.RefreshTilesInRange(map, tileLocation);
+            movement.ShowTilesInRange(true);
+            movement.ShowPath(true);
             selectedForMovement = true;
-            movement.EnablePath(true);
+            
         }
 
         else
         {
-            movement.Highlight(false);
-            attack.HighlightTilesInRange(false);
-            selectable.Select(SelectState.OFF);
-            movement.EnablePath(false);
+            movement.ShowTilesInRange(false);
+            movement.ShowPath(false);
+            attack.ShowTilesInRange(false);
+            attack.ShowTargets(false);
+            selectable.Select(SelectState.OFF);        
         }
     }
    
@@ -53,18 +60,54 @@ public class Unit : MonoBehaviour
     {
         if(selectedForMovement)
         {
-            movement.Highlight(false);
-            attack.RefreshTilesInRange(map, movement.TileDestination);
-            attack.HighlightTilesInRange(true);
+            movement.ShowTilesInRange(false);
+            attack.ShowTilesInRange(true);
+            attack.ShowTargets(true);
             selectedForMovement = false;
         }
 
         else
-        {            
-            attack.HighlightTilesInRange(false);
-            movement.Highlight(true);
+        {
+            attack.ShowTilesInRange(false);
+            attack.ShowTargets(false);
+            movement.ShowTilesInRange(true);
             selectedForMovement = true;
         }
+    }
+
+    public void NewTurn()
+    {
+        attack.ArmTargets(false);
+    }
+
+    public bool ExecuteTurn(int phase)
+    {
+        switch(phase)
+        {
+            case 0:
+                if(!movement.QueuedForMovement && attack.QueuedForAttack)
+                {
+                    attack.ArmTargets(true);
+                }
+
+                else if(movement.QueuedForMovement)
+                {
+                    movement.Move();
+                }
+                return false;
+
+            case 1:
+                return movement.Enroute;
+
+            case 2:
+                if (movement.QueuedForMovement && attack.QueuedForAttack)
+                {
+                    attack.ArmTargets(true);
+                }
+                return false;
+
+        }
+        return false;
     }
 
     public bool ProcessAction(GameObject actionObject)
@@ -78,7 +121,9 @@ public class Unit : MonoBehaviour
             {
                 if (leftMouseClick)
                 {
-                    return movement.SetDestination(tile, map);
+                    bool returnTrue = movement.SetDestination(tile, map);
+                    attack.RefreshTilesInRange(map, movement.TileDestination);
+                    return returnTrue;
                 }
 
                 else
@@ -89,7 +134,15 @@ public class Unit : MonoBehaviour
 
             else
             {
-                attack.SetAttack(tile, movement.GetCurrentTileLocation());
+                if (leftMouseClick)
+                {
+                    attack.SetAttack();
+                }
+
+                else
+                {
+                    attack.HighlightPotentialTargets(tile, map);
+                }
             }
             return true;
 
@@ -102,12 +155,24 @@ public class Unit : MonoBehaviour
     private void OnTriggerEnter(Collider collider)
     {
         Tile tileSteppedOn = collider.GetComponent<Tile>();
-        Debug.Log("Unit Stepped On: " + collider.gameObject);
+        TargetMarker targetMarker = collider.GetComponent<TargetMarker>();
+        
 
         if (tileSteppedOn)
         {
-            movement.SetCurrentTileLocation(tileSteppedOn);
-            attack.RefreshTilesInRange(map, movement.GetCurrentTileLocation());
+            tileLocation = tileSteppedOn;
+            movement.RefreshTilesInRange(map, tileSteppedOn);
+            attack.RefreshTilesInRange(map, tileSteppedOn);
+        }
+
+        else if(targetMarker)
+        {
+            if(movement.QueuedForMovement && ((Mathf.Abs(targetMarker.transform.position.x - transform.position.x) < 0.2f) && ((Mathf.Abs(targetMarker.transform.position.z - transform.position.z) < 0.2f))))
+            {
+                return;
+            }
+            movement.StopAtNextPoint();
+            targetMarker.TriggerAttack(this);
         }
     }
 

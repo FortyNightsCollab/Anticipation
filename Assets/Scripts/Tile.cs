@@ -41,7 +41,7 @@ public class Tile : MonoBehaviour
 
     public void Mark(Attack attack)
     {
-        Debug.Log("Tile Marked for Attack");
+       
         targetForAttacks.Add(attack);
     }
 
@@ -60,7 +60,7 @@ public class Tile : MonoBehaviour
     public void ClearTarget(Attack attack)
     {
         if(targetForAttacks.Contains(attack)) targetForAttacks.Remove(attack);
-        Debug.Log("Attack cleared");
+        
     }
 
     public List<Attack> GetAttacks(int team)

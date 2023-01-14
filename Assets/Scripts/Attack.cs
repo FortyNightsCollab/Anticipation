@@ -7,11 +7,20 @@ public class Attack : MonoBehaviour
     [SerializeField] int attackSpaces;
     [SerializeField] AttackShape attackShape;
     [SerializeField] GameObject attackEffect;
+    [SerializeField] GameObject targetMarker;
 
     MapSelection[] attackSelection;
+
+    bool queuedForAttack = false;
+    public bool QueuedForAttack { get { return queuedForAttack; } }
+
     List<Tile> combatTiles = new List<Tile>();
     public List<Tile> CombatTiles { get { return combatTiles; } }
+
     public List<Tile> tilesInRange = new List<Tile>();
+
+    List<GameObject> targets = new List<GameObject>();
+    List<Tile> potentialTargets = new List<Tile>();
 
     Vector3 destination;
     float destinationDistance;
@@ -25,12 +34,16 @@ public class Attack : MonoBehaviour
         GenerateDirectionSelections();       
     }
 
-    private void Update()
-    {
-       
+    public void ShowTargets(bool enable)
+    {      
+        foreach (GameObject target in targets)
+        {
+            MeshRenderer targetMeshRenderer = target.GetComponent<MeshRenderer>();
+            targetMeshRenderer.enabled = enable;
+        }
     }
 
-    public void HighlightTilesInRange(bool on)
+    public void ShowTilesInRange(bool on)
     {
         foreach (Tile tile in tilesInRange)
         {
@@ -42,24 +55,30 @@ public class Attack : MonoBehaviour
         }
     }
 
-    public void HighlightSelectedAttackTiles(bool on)
-    {
-
-    }
-
     public void RefreshTilesInRange(Map map, Tile currentLocation)
     {
+        tileLocation = currentLocation;
+
+        if(potentialTargets.Count > 0)
+        {
+            foreach(Tile potentialTarget in potentialTargets)
+            {
+                Destroy(potentialTarget);
+            }
+            potentialTargets.Clear();
+        }
+
         tilesInRange.Clear();
         for(int i = 0; i < attackSelection.Length; i++)
             map.TileHighlight(currentLocation, tilesInRange, attackSelection[i], SelectState.NOCHANGE);
     }
 
-    public void AddCombatTile(Tile tileToAdd)
+    void AddCombatTile(Tile tileToAdd)
     {
         combatTiles.Add(tileToAdd);      
     }
 
-    public void ArmTilesForAttack()
+    void ArmTilesForAttack()
     {
         foreach(Tile tile in combatTiles)
         {
@@ -67,7 +86,7 @@ public class Attack : MonoBehaviour
         }
     }
 
-    public void AttackAvailableTargets()
+    void AttackAvailableTargets()
     {    
         foreach (Tile tile in combatTiles)
         {
@@ -76,9 +95,21 @@ public class Attack : MonoBehaviour
         }
     }
 
+    public void ArmTargets(bool arm)
+    {
+        foreach(GameObject target in targets)
+        {
+            TargetMarker targetMarker = target.GetComponent<TargetMarker>();
+
+            if(targetMarker)
+            {
+                targetMarker.EnableCollision(arm);
+            }
+        }
+    }
+
     public void SteppedOnTile(Tile tile)
     {
-        Debug.Log("Step");
         tileLocation = tile;
     }
 
@@ -98,18 +129,34 @@ public class Attack : MonoBehaviour
         combatTiles.Clear();
     }
 
-    public void SetDestination(Vector3 newDestination)
+    public void HighlightPotentialTargets(Tile tile, Map map)
     {
-        
-    }
 
-    private void OnTriggerEnter(Collider collider)
-    {
-        Tile tileSteppedOn = collider.GetComponent<Tile>();
-
-        if (tileSteppedOn)
+        if(potentialTargets.Count > 0)
         {
-            tileLocation = tileSteppedOn;
+            foreach (Tile target in potentialTargets)
+            {
+                Selectable selectable = target.GetComponent<Selectable>();
+
+                if (selectable)
+                {
+                    selectable.Select(SelectState.HOVEROFF);
+                }
+            }
+            potentialTargets.Clear();
+        }
+
+      
+        potentialTargets = CalculateTargets(tile, map);
+
+        foreach(Tile target in potentialTargets)
+        {
+            Selectable selectable = target.GetComponent<Selectable>();
+            
+            if (selectable)
+            {
+                selectable.Select(SelectState.HOVERON);
+            }
         }
     }
 
@@ -118,6 +165,7 @@ public class Attack : MonoBehaviour
         return attackSelection[direction];
     }
 
+    /*
     public bool SetAttack(Tile targetTile, Tile attackStart)
     {
         if(tilesInRange.Contains(targetTile))
@@ -173,6 +221,55 @@ public class Attack : MonoBehaviour
 
         return false;
     }
+    */
+
+    public void TriggerAttackAtMarker(GameObject marker)
+    {
+        if(targets.Contains(marker))
+        {
+            GameObject spawnedSystem = Instantiate(attackEffect, marker.transform.position, Quaternion.identity);
+            Destroy(spawnedSystem, 2.0f);
+        }
+    }
+
+    public bool SetAttack()
+    {
+        if(targets.Count > 0)
+        {
+            foreach(GameObject target in targets)
+            {
+                Destroy(target);
+            }
+            targets.Clear();
+        }
+
+        foreach(Tile tile in potentialTargets)
+        {
+            Vector3 targetPosition = tile.transform.position;
+            targetPosition.y = transform.position.y;
+
+            GameObject target = Instantiate(targetMarker, targetPosition, Quaternion.identity);
+
+            if(target)
+            {
+                targets.Add(target);
+
+                TargetMarker targetMarker = target.GetComponent<TargetMarker>();
+                Unit unitOwner = gameObject.GetComponent<Unit>();
+
+                if (targetMarker && unitOwner)
+                {
+                    targetMarker.AttackToTrigger = this;
+                    targetMarker.EnableCollision(false);
+                    
+                }
+            }
+        }
+
+        if (targets.Count > 0) queuedForAttack = true;
+
+        return true;
+    }
 
     void GenerateDirectionSelections()
     {
@@ -208,6 +305,79 @@ public class Attack : MonoBehaviour
             Destroy(spawnedSystem, 2.0f);
         }
     }
+
+    private List<Tile> CalculateTargets(Tile destinationTile, Map map)
+    {
+        List<Tile> calculatedTargets = new List<Tile>();
+
+        if (tilesInRange.Contains(destinationTile))
+        {
+            //Get map indices of start/destination tiles
+            int destinationTileX = destinationTile.Location & 0x0000FFFF;
+            int destinationTileY = (destinationTile.Location & 0x7FFF0000) >> 16;
+            int startTileX = tileLocation.Location & 0x0000FFFF;
+            int startTileY = (tileLocation.Location & 0x7FFF0000) >> 16;
+
+            //Find out how far apart in columns and rows
+            int differenceX = destinationTileX - startTileX;
+            int differenceY = destinationTileY - startTileY;
+
+            int nextTileX = startTileX;
+            int nextTileY = startTileY;
+            bool tileFoundInRange = true;
+
+            switch (attackShape)
+            {
+                case AttackShape.LINE:
+                    while (tileFoundInRange)
+                    {
+                        tileFoundInRange = false;
+
+                        if (differenceX > 0)
+                        {
+                            nextTileX++;
+                        }
+
+                        else if (differenceX < 0)
+                        {
+                            nextTileX--;
+                        }
+
+                        else if (differenceY > 0)
+                        {
+                            nextTileY++;
+                        }
+
+                        else if (differenceY < 0)
+                        {
+                            nextTileY--;
+                        }
+
+                        if ((nextTileX >= map.Width) || (nextTileX < 0) || (nextTileY >= map.Height) || (nextTileY < 0)) break;
+
+                        foreach (Tile tile in tilesInRange)
+                        {
+                            int tileX = tile.Location & 0x0000FFFF;
+                            int tileY = (tile.Location & 0x7FFF0000) >> 16;
+
+                            if (nextTileX == tileX && nextTileY == tileY)
+                            {
+                                if (!calculatedTargets.Contains(tile))
+                                {
+                                    tileFoundInRange = true;
+                                    calculatedTargets.Add(tile);
+                                }
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+
+        return calculatedTargets;
+    }
+
+
 }
 
 public enum AttackShape

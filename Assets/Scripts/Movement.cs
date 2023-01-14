@@ -7,11 +7,12 @@ public class Movement : MonoBehaviour
     [SerializeField] int movementSpaces;
     [SerializeField] float speed;
     [SerializeField] GameObject pathPoint;
-    
+
+    bool queuedForMovement = false;
+    public bool QueuedForMovement { get { return queuedForMovement; } }
+
     MapSelection movementSelection;
     public MapSelection MovementSelection { get { return movementSelection; } }
-    List<Tile> motionTiles = new List<Tile>();
-    public List<Tile> MotionTiles { get { return motionTiles; } }
 
     Tile tileStartPosition;
     public Tile TileStartPosition { get { return tileStartPosition; } }
@@ -21,15 +22,14 @@ public class Movement : MonoBehaviour
 
     List<Tile> tilesInRange = new List<Tile>();
 
-    Vector3 destination;
-    float destinationDistance;
-
-    Vector3 turnStartPosition;
-
     List<GameObject> path = new List<GameObject>();
+
     List<Tile> potentialPath = new List<Tile>();
 
-    Tile tileLocation;
+    Vector3 destination;
+    float destinationDistance;
+  
+
     bool enroute;
     public bool Enroute { get { return enroute; } }
 
@@ -39,15 +39,23 @@ public class Movement : MonoBehaviour
         movementSelection = new MapSelection(new RowOffest(-movementSpaces, -movementSpaces), (movementSpaces * 2) + 1, (movementSpaces * 2) + 1);
     }
 
-    public void RefreshTilesInRange(Map map)
+    public void RefreshTilesInRange(Map map, Tile location)
     {
+        tileStartPosition = location;
         tilesInRange.Clear();
-        map.TileHighlight(tileLocation, tilesInRange, movementSelection, SelectState.NOCHANGE);
+        map.TileHighlight(location, tilesInRange, movementSelection, SelectState.NOCHANGE);
     }
 
-    public List<Tile> GetTilesInRange()
+    public void StopAtNextPoint()
     {
-        return tilesInRange;
+        if(path.Count > 1)
+        {       
+            while(path.Count > 1)
+            {
+                Destroy(path[1]);
+                path.RemoveAt(1);
+            }
+        }
     }
 
     private void Update()
@@ -60,7 +68,7 @@ public class Movement : MonoBehaviour
 
             float distanceToDestination = movementVector.magnitude;
             movementVector.Normalize();
-            Debug.Log("Speed: " + speed);
+       
             Vector3 frameDistance = movementVector * speed * Time.deltaTime;
 
             if(distanceToDestination < 0.01f)
@@ -76,14 +84,8 @@ public class Movement : MonoBehaviour
         }
     }
 
-    public void AddMotionTile(Tile tileToAdd)
-    {
-        motionTiles.Add(tileToAdd);
-    }
 
-    
-
-    public void EnablePath(bool enable)
+    public void ShowPath(bool enable)
     {
         if(path.Count > 0 )
         {
@@ -92,28 +94,6 @@ public class Movement : MonoBehaviour
                 point.SetActive(enable);
             }
         }
-    }
-
-    public void SteppedOnTile(Tile tile)
-    {
-        Debug.Log("Step");      
-
-        tileLocation = tile;
-    }
-
-    public void ReturnToStart()
-    {
-        transform.position = turnStartPosition;      
-    }
-
-    public Tile GetCurrentTileLocation()
-    {
-        return tileLocation;
-    }
-
-    public void SetCurrentTileLocation(Tile newTileLocation)
-    {
-        tileLocation = newTileLocation;
     }
 
     public bool SetDestination(Tile newDestination, Map map)
@@ -131,6 +111,8 @@ public class Movement : MonoBehaviour
 
             path.Clear();
             StartCoroutine(RenderPath(CalculatePath(newDestination, map)));
+
+            queuedForMovement = true;
 
             return true;
         }
@@ -186,45 +168,16 @@ public class Movement : MonoBehaviour
 
     public void SetNewTurnPosition()
     {
-        tileStartPosition = tileLocation;
-        turnStartPosition = gameObject.transform.position;
-        Debug.Log("Setting new start location");
+        tileStartPosition = tileDestination;
+    
     }
 
-    public void Highlight(bool on)
+    public void ShowTilesInRange(bool on)
     {
         foreach(Tile tile in tilesInRange)
         {        
             if (on) tile.Select(SelectState.INITIATE);
             else tile.Select(SelectState.OFF);              
-        }
-    }
-
-    private void OnTriggerEnter(Collider collider)
-    {
-        Tile tileSteppedOn = collider.GetComponent<Tile>();
-        Debug.Log("Stepped On: " + collider.gameObject);
-
-        if (tileSteppedOn)
-        {          
-            if (tileLocation == null)
-            {
-                tileStartPosition = tileSteppedOn;
-                turnStartPosition = transform.position;
-            }
-
-            List<Attack> attacksQueued = tileSteppedOn.GetAttacks(0);
-            Debug.Log("number of attacks assigned: " + attacksQueued.Count);
-            if(attacksQueued.Count > 0)
-            {
-                foreach(Attack attack in attacksQueued)
-                {
-                    attack.Use(tileSteppedOn);
-                }
-
-  //              SetDestination(tileSteppedOn);
-            }
-            tileLocation = tileSteppedOn;
         }
     }
 
@@ -253,8 +206,8 @@ public class Movement : MonoBehaviour
             //Get map indices of start/destination tiles
             int destinationTileX = destinationTile.Location & 0x0000FFFF;
             int destinationTileY = (destinationTile.Location & 0x7FFF0000) >> 16;
-            int startTileX = tileLocation.Location & 0x0000FFFF;
-            int startTileY = (tileLocation.Location & 0x7FFF0000) >> 16;
+            int startTileX = tileStartPosition.Location & 0x0000FFFF;
+            int startTileY = (tileStartPosition.Location & 0x7FFF0000) >> 16;
 
             //Find out how far apart in columns and rows
             int differenceX = destinationTileX - startTileX;

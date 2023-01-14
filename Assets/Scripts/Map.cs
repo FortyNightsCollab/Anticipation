@@ -30,6 +30,8 @@ public class Map : MonoBehaviour
     Vector3 previousMousePosition;
     bool bMovementSelection;
     bool runningTurn = false;
+    List<Unit> unitsInPlay = new List<Unit>();
+    int turnPhase = 0;
 
     private void Awake()
     {
@@ -77,25 +79,25 @@ public class Map : MonoBehaviour
 
     void ProcessTurn()
     {
-        foreach(GameObject objectToMove in unitsToMove)
+        if (turnPhase < 3)
         {
-            Movement movement = objectToMove.GetComponent<Movement>();
-            if(movement.Enroute) { return; }
-            movement.SetNewTurnPosition();
-        }    
+            bool phaseExecuting = false;
 
-        foreach (GameObject attackObject in unitsToAttack)
-        {
-            Attack attack = attackObject.GetComponent<Attack>();
-            if(unitsToMove.Contains(attackObject))
+            foreach (Unit unit in unitsInPlay)
             {
-                attack.AttackAvailableTargets();
+                phaseExecuting = unit.ExecuteTurn(turnPhase);
+
+                if (phaseExecuting) break;
             }
-            attack.ClearAttack();
+
+            if (!phaseExecuting) turnPhase++;
         }
-        unitsToAttack.Clear();
-        unitsToMove.Clear();
-        runningTurn = false;
+
+        else
+        {
+            runningTurn = false;
+            turnPhase = 0;
+        }
     }
 
     void SetupTurn()
@@ -130,8 +132,18 @@ public class Map : MonoBehaviour
             if (selectedUnit)
             {
                 selectedUnit.NextAction();
-                Debug.Log("Next Action");
+            
             }          
+        }
+
+        else if(Input.GetKeyDown(KeyCode.T))
+        {
+            runningTurn = true;
+            if(selectedUnit)
+            {
+                selectedUnit.Select(false);
+                selectedUnit = null;
+            }
         }
 
         if (hitData.collider)                                                      //If raycast hit something
@@ -157,8 +169,7 @@ public class Map : MonoBehaviour
                     }
                 }
 
-                
-                
+                               
                 if (unit)
                 {
                     selectable.Select(SelectState.HOVERON);
@@ -172,63 +183,7 @@ public class Map : MonoBehaviour
                         mapCamera.ChangeFocalPoint(selectedUnit.gameObject.transform.position);
                     }
                 }
-           
-
-                /*
-                    if (selectable && selectable.IsSelectable)                                                        //If hit object is selectable      
-                {
-                    selectable.Select(SelectState.HOVERON);
-                    hoverSelect.Add(selectable);
-
-                    if (Input.GetKeyDown(KeyCode.T))
-                    {
-                        foreach (GameObject attackObject in unitsToAttack)
-                        {
-                            if (!unitsToMove.Contains(attackObject))
-                            {
-                                Attack attack = attackObject.GetComponent<Attack>();
-                                attack.ArmTilesForAttack();
-                            }
-                        }
-
-                        foreach (GameObject moveObject in unitsToMove)
-                        {
-                            Movement movement = moveObject.GetComponent<Movement>();
-                            Debug.Log("Move units");
-                            movement.ReturnToStart();
-                            movement.Move();
-                        }
-
-                        runningTurn = true;
-                    }
-
-                    if (Input.GetMouseButtonDown(0))
-                    {
-                        if (selectedUnit)
-                        {
-                            if (!selectedUnit.ProcessAction(hitObject))
-                            {
-                                selectedUnit.Select(false);
-                                selectedUnit = null;
-                            }
-                        }
-
-                        //another if is intentional
-                        if (!selectedUnit)
-                        {
-                            Unit unitToSelect = selectable.gameObject.GetComponent<Unit>();
-
-                            if (unitToSelect)
-                            {
-                                unitToSelect.Select(true);
-                                selectedUnit = unitToSelect;
-                                mapCamera.ChangeFocalPoint(selectedUnit.gameObject.transform.position);
-                                selectable.Select(SelectState.HOVERON);
-                            }
-                        }
-                    }  
-                }
-                */
+          
             }
         }
     }
@@ -367,6 +322,11 @@ public class Map : MonoBehaviour
         return mapSelection;
     }
 
+    public void RegisterUnit(Unit unit)
+    {
+        unitsInPlay.Add(unit);
+    }
+
 
     public void TileHighlight(Tile start, List<Tile> tileGroup, MapSelection selection, SelectState selectStateToUse, bool allowAttackOverride = true)
     {
@@ -398,8 +358,9 @@ public class Map : MonoBehaviour
                 if (mapData.ContainsKey(adjustedTileLocation))
                 {
                     surroundingTile = mapData[adjustedTileLocation];
-             //       if (Vector3.Distance(surroundingTile.transform.position, previousTileLocation) < (tileSize.x * 2.0f))
-              //      {
+
+                    if (!tileGroup.Contains(surroundingTile))
+                    {
                         Selectable selectable = surroundingTile.GetComponent<Selectable>();
 
                         if (selectable)
@@ -408,13 +369,13 @@ public class Map : MonoBehaviour
                                 (selectable.CurrentState == SelectState.ATTACKCONFIRMED && allowAttackOverride))
                             {
                                 selectable.Select(selectStateToUse);
-                            }         
-                            
-                            if(selectStateToUse == SelectState.HOVERON) hoverSelect.Add(selectable);
+                            }
+
+                            if (selectStateToUse == SelectState.HOVERON) hoverSelect.Add(selectable);
                         }
                         tileGroup.Add(surroundingTile);
                         previousTileLocation = surroundingTile.transform.position;
-              //      }
+                    }
                 }
 
                 else
